@@ -321,9 +321,9 @@ class Launcher(wx.Frame):
             extra.SetValue(existing_conf.get("extra", ""))
             if "schedule" in existing_conf:
                 schedmins.SetValue(",".join([str(e) for e in existing_conf["schedule"]]))
-            sldl.SetValue(existing_conf.get("ldlmode", True))
-            frvr.SetValue(existing_conf.get("forever", False))
-            frvr2.SetValue(existing_conf.get("foreverldl", False))
+            sldl.SetValue(existing_conf.get("ldlmode", False))
+            frvr.SetValue(existing_conf.get("forever", True))
+            frvr2.SetValue(existing_conf.get("foreverldl", True))
             aspect.SetValue(existing_conf.get("aspect", True))
             socket.SetValue(existing_conf.get("socket", False))
             
