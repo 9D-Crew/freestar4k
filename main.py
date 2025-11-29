@@ -392,7 +392,7 @@ def draw_bg(top_offset=0, bh_offset=0, all_offset=0, special=None, box=True):
         pg.draw.rect(win, box_c[3], pg.Rect(74+xoff, 102-all_offset, 598, 286-bh_offset))
         pg.draw.rect(win, box_c[4], pg.Rect(78+xoff, 106-all_offset, 590, 278-bh_offset))
     if special == "al":
-        if "oldal" in old:
+        if "oldal" not in old:
             win.blit(al_g, (0, 91-all_offset))
         else:
             pg.draw.rect(win, bg_c[1], pg.Rect(0, 91-all_offset, screenw, 48+3))
