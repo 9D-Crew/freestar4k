@@ -195,7 +195,7 @@ if compress:
     rwin = pg.display.set_mode((int(screenw//1.2), 480))
 else:
     win = pg.display.set_mode((screenw, 480), flags=(borderless*pg.NOFRAME), vsync=True)
-pg.display.set_caption("FreeStar 4000 v1.0.1")
+pg.display.set_caption("FreeStar 4000 v1.0.2")
 
 ext_loaded = []
 for ext in extensions:
