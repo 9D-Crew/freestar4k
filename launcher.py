@@ -5,6 +5,7 @@ import os
 import sys
 import runpy
 import sounddevice as sd
+from signal import SIGTERM
 
 devices = ["Default"]
 devices.extend([e["name"] for e in sd.query_devices() if e["max_output_channels"] > 0])
@@ -48,6 +49,8 @@ class TBIcon(wx.adv.TaskBarIcon):
     def Close(self, event):
         global closesim
         closesim = True
+        if sub:
+            sub.send_signal(SIGTERM)
         self.frame.Close()
 
 

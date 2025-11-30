@@ -1171,10 +1171,13 @@ def drawpage_fmt(lines : list, formatting : list):
     fmt = [1, "W"]
     colors = {
         "W": (255, 255, 255),
-        "Y": yeller,
         "R": (255, 0, 0),
         "G": (0, 255, 0),
-        "B": (0, 0, 255)
+        "B": (0, 0, 255),
+        "C": (0, 255, 255),
+        "Y": yeller,
+        "M": (255, 0, 255),
+        "K": (0, 0, 0)
     }
     if len(formatting) < len(lines):
         formatting.extend([None for _ in range(len(lines)-len(formatting))])
@@ -2153,6 +2156,12 @@ while working:
             drawshadow(startitlefont, efname, 180+txoff//3, 23+ldl_y, 3, mono=15, ofw=1.07, upper=veryuppercase)
             drawshadow(startitlefont, "Extended Forecast", 180+txoff//3, 49+ldl_y, 3, color=yeller, mono=15, ofw=1.07, upper=veryuppercase)
             def sane(text):
+                if len(wraptext(text, 10)) > 2:
+                    if "/" in text:
+                        tl = list(text)
+                        tl.insert(text.index("/")+1, " ")
+                        text = "".join(tl)
+                        return text
                 for tx in text.split(" "):
                     if len(tx) > 10:
                         break

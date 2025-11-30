@@ -1,1 +1,1 @@
-Text goes here
+You can use the overlay extension to show formatted text on the screen!
