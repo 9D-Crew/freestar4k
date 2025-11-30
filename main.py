@@ -2227,7 +2227,7 @@ while working:
         crawling = True
     if ldlon and not ldlmode:
         colorbug_started = False
-    if (ldlon and not serial) or not ldlmode:
+    if (ldlon and not serial) or not ldlmode or alerting:
         if serial:
             drawshadow(smallfont, "SN: 000000v1.0 SW:00000000 DQ:100", 78, 402.5-8, 3, mono=gmono, char_offsets={})
             drawshadow(smallfont, "RLYS:0110 BAUD:9600 SENSORS:N/A", 78, 402.5+24, 3, mono=gmono, char_offsets={})
@@ -2346,7 +2346,7 @@ while working:
                     if (ldlidx == 9 or (ldlidx == 8 and not extraldltext)):
                         ldlinterval *= 3
                     ldldrawidx = 0
-        elif not (slide in ["lr", "cr"]) or alerting:
+        elif (not (slide in ["lr", "cr"])) or alerting:
             if alerting:
                 alertactive %= len(alertdata[1])
                 crawl = alertdata[1][alertactive].upper()
