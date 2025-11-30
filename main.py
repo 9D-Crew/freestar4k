@@ -9,7 +9,7 @@ import requests as r
 from io import BytesIO
 import runpy
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 audiorate = 44100
 widescreen = False
@@ -961,7 +961,7 @@ def drawshadow(font, text, x, y, offset, color=(255, 255, 255), surface=win, mon
                 for i, char in enumerate(text):
                     drawchar(char, sheet[1], x+i*m.floor(mono)+2+char_offsets.get(char, 0), y+2, None)
             for i, char in enumerate(text):
-                drawchar(char, sheet[0], x+i*m.floor(mono)+2+char_offsets.get(char, 0), y+2, color)
+                drawchar(char, sheet[0], x+i*m.floor(mono)+2+char_offsets.get(char, 0), y+2, color if type(color) != list else color[i])
         io = 0
         ic = 0
         if shadow:
@@ -986,7 +986,7 @@ def drawshadow(font, text, x, y, offset, color=(255, 255, 255), surface=win, mon
             if fxa[0]:
                 fxo = fx[0][ic]
                 ic += 1
-            drawchar(char, sheet[0], x+fxo[0]+(i-io)*m.floor(mono)+char_offsets.get(char, 0), y+fxo[1], color)
+            drawchar(char, sheet[0], x+fxo[0]+(i-io)*m.floor(mono)+char_offsets.get(char, 0), y+fxo[1], color if type(color) != list else color[i])
         
         return
     
@@ -1722,7 +1722,7 @@ class AccurateClock():
         return 1000/fps
 
 working = True
-cl = AccurateClock()
+cl = AccuraterClock()
 
 serial = False
 fired = False

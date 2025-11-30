@@ -814,9 +814,9 @@ class Launcher(wx.Frame):
         
         about = wx.Panel(self.nb)
         aboutsizer = wx.BoxSizer(wx.VERTICAL)
-        abouttext = wx.StaticText(about, label="FreeStar 4k Launcher\nVersion 1.0.1", style=wx.ALIGN_CENTER)
+        abouttext = wx.StaticText(about, label="FreeStar 4k Launcher\nVersion 1.0.2", style=wx.ALIGN_CENTER)
         logo = wx.StaticBitmap(about, bitmap=wx.Bitmap("launcher/icon_128x128.png", wx.BITMAP_TYPE_PNG))
-        abouttext2 = wx.StaticText(about, label="Developed by 9D Crew\nA special thanks to COLSTER for helping with gathering STAR fonts!\nThanks to Nick S. for creating the icons used by this simulator.\nThanks to Bill Goodwill for contributing to The Weather Channel community by creating the WS4000 simulator.\nIf you are Bill Goodwill, creator of the WS4000 Simulator, please do not use FreeStar simulators.\nThis program is licensed under the GNU General Public License v3.0.\nFor questions, visit https://freestar.lewolfyt.cc/", style=wx.ALIGN_CENTER)
+        abouttext2 = wx.StaticText(about, label="Developed by 9D Crew\nA special thanks to COLSTER for helping with gathering STAR fonts!\nThanks to Nick S. and Malek Masoud for creating the icons used by this simulator.\nThanks to Bill Goodwill for contributing to The Weather Channel community by creating the WS4000 simulator.\nIf you are Bill Goodwill, creator of the WS4000 Simulator, please do not use FreeStar simulators.\nThis program is licensed under the GNU General Public License v3.0.\nFor questions, visit https://freestar.lewolfyt.cc/", style=wx.ALIGN_CENTER)
         aboutsizer.Add(abouttext, 0, wx.ALL | wx.ALIGN_CENTER, 10)
         aboutsizer.Add(logo, 0, wx.ALL | wx.ALIGN_CENTER, 10)
         aboutsizer.Add(abouttext2, 1, wx.ALL | wx.ALIGN_CENTER, 10)
