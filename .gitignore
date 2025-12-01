@@ -1,0 +1,9 @@
+.DS_Store
+conf.py
+configs/*
+flavors/*
+__pycache__
+screenshot.png
+screenshot_scaled.png
+latestframe.png
+commit.txt
