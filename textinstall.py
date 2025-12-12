@@ -21,10 +21,8 @@ def download_package(name):
     if p.returncode != 0:
         print(f"Error installing package: {name}")
         errors += 1
-        return False
     elif "satisfied" in p.stdout.read().decode():
         print(f"Package {pkg} is already installed")
-        return True
 
 for pkg in ["pygame-ce", "wxPython", "sounddevice", "requests", "ephem", "opencv-python", "av"]:
     print(f"Installing package {pkg}")
@@ -38,4 +36,3 @@ if errors:
         print("Try changing to a supported Python version.")
 else:
     print("Done! You can now run launcher.py to start the launcher.")
-input("Press enter to continue.")
