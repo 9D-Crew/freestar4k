@@ -1177,6 +1177,7 @@ class Launcher(wx.Frame):
         
         panel.SetSizer(sizer)
         
+        self.Layout()
         self.Show()
         self.SetIcons(ib)
         tbi = wx.adv.TaskBarIcon(wx.adv.TBI_DOCK)

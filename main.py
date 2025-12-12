@@ -2675,8 +2675,9 @@ while working:
         if not ui or ((slide in ["lr", "cr"]) and not ldlmode):
             pass
         elif ldlmode or textpos >= 2:
-            drawshadow(smallfont, time.upper(), 465+round((screenw-768)*2/3), 375+(ldl_y//2+(4 if textpos == 2 or ldlmode else 0)), 3, mono=gmono, color=tcl, char_offsets={})
-            drawshadow(smallfont, date.upper(), 60+round((screenw-768)/3), 375+(ldl_y//2+(4 if textpos == 2 or ldlmode else 0)), 3, mono=gmono, char_offsets={})
+            txo = ((-6 if textpos <= 2 else ldl_y//2))
+            drawshadow(smallfont, time.upper(), 465+round((screenw-768)*2/3), 375+txo, 3, mono=gmono, color=tcl, char_offsets={})
+            drawshadow(smallfont, date.upper(), 60+round((screenw-768)/3), 375+txo, 3, mono=gmono, char_offsets={})
         elif slide == "oldcc" and not ldlmode and textpos < 2:
             pass
         elif textpos == 0:
