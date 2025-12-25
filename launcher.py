@@ -199,13 +199,13 @@ class DidYouKnow(wx.Dialog):
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
         
-        title_font = wx.Font((30 if sys.platform != "linux" else 20), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        title_font = wx.Font((30 if sys.platform == "darwin" else 20), wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
         title = wx.StaticText(panel, label="Did You Know?")
         title.SetFont(title_font)
         sizer.Add(title, 0, wx.ALL | wx.ALIGN_LEFT, 10)
         
         tip_text = wx.StaticText(panel, label=tip)
-        tip_font = wx.Font(18 if sys.platform != "linux" else 12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        tip_font = wx.Font(18 if sys.platform == "darwin" else 12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
         tip_text.SetFont(tip_font)
         sizer.Add(tip_text, 1, wx.ALL | wx.EXPAND, 5)
         #tip_text.Wrap(350)
@@ -340,7 +340,8 @@ class Launcher(wx.Frame):
             "Older Almanac Banner",
             "Uppercase Almanac AM/PM",
             "Old CC Full-Width Banner",
-            "White Extended Forecast Days"
+            "White Extended Forecast Days",
+            "Old Travel Cities Background"
         ])
         
         pa2s.Add(self.flags, 1, wx.ALL | wx.EXPAND)
@@ -372,6 +373,8 @@ class Launcher(wx.Frame):
                 set_flags.append(10)
             if "whiteXF" in flg:
                 set_flags.append(11)
+            if "oldtcf" in flg:
+                set_flags.append(12)
             self.flags.SetCheckedItems(set_flags)
         
         top = wx.Panel(panel)
@@ -441,6 +444,58 @@ class Launcher(wx.Frame):
         paas.Add(wx.StaticText(paa, label="Radar Logo:"), 0, wx.ALL, 2)
         radarlogo = wx.FilePickerCtrl(paa)
         paas.Add(radarlogo, 0, wx.ALL | wx.EXPAND, 2)
+        pas.Add(paa, 1, wx.ALL | wx.EXPAND, 2)
+
+        pg2s.Add(pa, 0, wx.ALL | wx.EXPAND, 2)
+        ###
+        
+        ###
+        pa = wx.Panel(page2)
+        pas = wx.BoxSizer(wx.HORIZONTAL)
+        pa.SetSizer(pas)
+
+        paa = wx.Panel(pa)
+        paas = wx.BoxSizer(wx.VERTICAL)
+        paa.SetSizer(paas)
+        paas.Add(wx.StaticText(paa, label="Tidal Station 1 ID:"), 0, wx.ALL, 2)
+        t1i = wx.TextCtrl(paa)
+        t1i.SetMaxLength(7)
+        paas.Add(t1i, 0, wx.ALL | wx.EXPAND, 2)
+        pas.Add(paa, 1, wx.ALL | wx.EXPAND, 2)
+
+        paa = wx.Panel(pa)
+        paas = wx.BoxSizer(wx.VERTICAL)
+        paa.SetSizer(paas)
+        paas.Add(wx.StaticText(paa, label="Tidal Station 2 ID:"), 0, wx.ALL, 2)
+        t2i = wx.TextCtrl(paa)
+        t2i.SetMaxLength(7)
+        paas.Add(t2i, 0, wx.ALL | wx.EXPAND, 2)
+        pas.Add(paa, 1, wx.ALL | wx.EXPAND, 2)
+
+        pg2s.Add(pa, 0, wx.ALL | wx.EXPAND, 2)
+        ###
+        
+        ###
+        pa = wx.Panel(page2)
+        pas = wx.BoxSizer(wx.HORIZONTAL)
+        pa.SetSizer(pas)
+
+        paa = wx.Panel(pa)
+        paas = wx.BoxSizer(wx.VERTICAL)
+        paa.SetSizer(paas)
+        paas.Add(wx.StaticText(paa, label="Tidal Station 1 Name:"), 0, wx.ALL, 2)
+        t1n = wx.TextCtrl(paa)
+        t1n.SetMaxLength(26)
+        paas.Add(t1n, 0, wx.ALL | wx.EXPAND, 2)
+        pas.Add(paa, 1, wx.ALL | wx.EXPAND, 2)
+
+        paa = wx.Panel(pa)
+        paas = wx.BoxSizer(wx.VERTICAL)
+        paa.SetSizer(paas)
+        paas.Add(wx.StaticText(paa, label="Tidal Station 2 Name:"), 0, wx.ALL, 2)
+        t2n = wx.TextCtrl(paa)
+        t2n.SetMaxLength(26)
+        paas.Add(t2n, 0, wx.ALL | wx.EXPAND, 2)
         pas.Add(paa, 1, wx.ALL | wx.EXPAND, 2)
 
         pg2s.Add(pa, 0, wx.ALL | wx.EXPAND, 2)
@@ -543,15 +598,18 @@ class Launcher(wx.Frame):
             nat.SetValue(existing_conf.get("ldllf", False))
             mainlogo.SetPath(existing_conf.get("mainlogo", "logos/mwslogo.png"))
             radarlogo.SetPath(existing_conf.get("radarlogo", "logos/mwsradar.png"))
+            
+            t1, t2, n1, n2 = existing_conf.get("tidal", ("", "", "", ""))
+            t1i.SetValue(t1)
+            t2i.SetValue(t2)
+            t1n.SetValue(n1)
+            t2n.SetValue(n2)
         
         obslocs = []
         if conf_exist:
             obslocs = existing_conf.get("obsloc", [])
-        reglocs = []
         obsloc = []
         obsname = []
-        regloc = []
-        regname = []
         page3 = wx.Panel(self.nb)
         p3sizer = wx.BoxSizer(wx.VERTICAL)
         page3.SetSizer(p3sizer)
@@ -606,36 +664,46 @@ class Launcher(wx.Frame):
         pas.Add(loclab, 1, wx.ALL | wx.EXPAND, 2)
         pas.Add(namelab, 1, wx.ALL | wx.EXPAND, 2)
         p3p2sizer.Add(pa, 0, wx.ALL | wx.EXPAND, 2)
-        for i in range(7):
-            pa = wx.Panel(page3p2)
-            pas = wx.BoxSizer(wx.HORIZONTAL)
-            pa.SetSizer(pas)
-            locent = wx.TextCtrl(pa, pos=(20, 20+25*i))
-            nameent = wx.TextCtrl(pa, pos=(20, 20+25*i))
-            nameent.SetMaxLength(14)
+        # for i in range(7):
+        #     pa = wx.Panel(page3p2)
+        #     pas = wx.BoxSizer(wx.HORIZONTAL)
+        #     pa.SetSizer(pas)
+        #     locent = wx.TextCtrl(pa, pos=(20, 20+25*i))
+        #     nameent = wx.TextCtrl(pa, pos=(20, 20+25*i))
+        #     nameent.SetMaxLength(14)
             
-            if i < len(reglocs):
-                locent.SetValue(reglocs[i][0])
-                nameent.SetValue(reglocs[i][1])
+        #     if i < len(reglocs):
+        #         locent.SetValue(reglocs[i][0])
+        #         nameent.SetValue(reglocs[i][1])
 
-            locent.SetMinSize(wx.Size(-1, 15))
-            nameent.SetMinSize(wx.Size(-1, 15))
+        #     locent.SetMinSize(wx.Size(-1, 15))
+        #     nameent.SetMinSize(wx.Size(-1, 15))
             
-            regloc.append(locent)
-            regname.append(nameent)
-            pas.Add(locent, 1, wx.ALL | wx.EXPAND, 2)
-            pas.Add(nameent, 1, wx.ALL | wx.EXPAND, 2)
-            p3p2sizer.Add(pa, 1, wx.ALL | wx.EXPAND, 2)
+        #     regloc.append(locent)
+        #     regname.append(nameent)
+        #     pas.Add(locent, 1, wx.ALL | wx.EXPAND, 2)
+        #     pas.Add(nameent, 1, wx.ALL | wx.EXPAND, 2)
+        #     p3p2sizer.Add(pa, 1, wx.ALL | wx.EXPAND, 2)
+        pa = wx.Panel(page3p2)
+        pas = wx.BoxSizer(wx.HORIZONTAL)
+        pa.SetSizer(pas)
+        rlocent = wx.adv.EditableListBox(pa)
+        pas.Add(rlocent, 1, wx.ALL | wx.EXPAND, 2)
+        rnameent = wx.adv.EditableListBox(pa)
+        pas.Add(rnameent, 1, wx.ALL | wx.EXPAND, 2)
+        
+        if conf_exist:
+            rlocent.SetStrings(existing_conf.get("reglocs", []))
+            rnameent.SetStrings(existing_conf.get("regnames", []))
+        
+        p3p2sizer.Add(pa, 1, wx.ALL | wx.EXPAND, 0)
 
-        rsort = wx.Choice(page3p2, choices=["Don't Sort", "Sort Alphabetically"])
-        p3p2sizer.Add(rsort, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
         page3nb.AddPage(page3p2, "Regional Observations")
         
         p3sizer.Add(page3nb, 1, wx.ALL | wx.EXPAND, 2)
 
         #page4 = wx.Panel(self.nb)
         lsort.SetSelection(existing_conf.get("lsort", 0))
-        rsort.SetSelection(existing_conf.get("rsort", 0))
         
         page5 = wx.Panel(self.nb)
         sizer2 = wx.GridSizer(2, 0, 0)
@@ -648,12 +716,15 @@ class Launcher(wx.Frame):
             "cc": "Current Conditions",
             "oldcc": "Old Current Conditions",
             "lo": "Latest Observations",
+            "ro": "Regional Observations",
             "lf": "36-Hour Forecast",
             "xf": "Extended Forecast",
             "lr": "Local Radar",
             "cr": "Current Radar",
             "al": "Almanac",
             "ol": "Outlook",
+            "tcf": "Travel Cities Forecast",
+            "ti": "Tides",
             "sf": "School Forecast (Custom)",
             "df": "Daypart Forecast (Custom)",
             "intro": "Intro (Custom)"
@@ -803,8 +874,9 @@ class Launcher(wx.Frame):
         btnpanel.Bind(wx.EVT_BUTTON, repSlide, rep_btn)
 
         spincts = {}
+        spinctd = {}
 
-        def addPageSelector(name, sid, desc="", length=0):
+        def addPageSelector(name, sid, desc="", length=10):
             newpage = wx.Panel(self.flavori)
             sizer = wx.BoxSizer(wx.VERTICAL)
             newpage.SetSizer(sizer)
@@ -823,8 +895,9 @@ class Launcher(wx.Frame):
             tm = wx.SpinCtrlDouble(pan)
             tm.SetIncrement(0.1)
             tm.SetMax(60)
-            tm.SetValue(10)
+            tm.SetValue(length)
             spincts[name] = tm
+            spinctd[name] = length
             ps.Add(txx, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 2)
             ps.Add(tm, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 2)
             sizer.Add(pan, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 2)
@@ -832,8 +905,9 @@ class Launcher(wx.Frame):
             self.flavori.AddPage(newpage, name)
 
         def resettime(event):
-            for tm in spincts.values():
-                tm.SetValue(10)
+            kk = list(spinctd.values())
+            for i, tm in enumerate(list(spincts.values())):
+                tm.SetValue(kk[i])
 
         self.flavori.Bind(wx.EVT_CHOICEBOOK_PAGE_CHANGED, resettime)
         
@@ -842,14 +916,17 @@ class Launcher(wx.Frame):
         addPageSelector("Current Conditions", "cc", "Shows the current weather conditions.")
         addPageSelector("Old Current Conditions", "oldcc", "Text-based CC page from before April 17, 1991.")
         addPageSelector("Latest Observations", "lo", "Displays conditions from multiple nearby stations.")
-        addPageSelector("Old Regional Observations", "oldro", "Displays conditions from multiple father-away stations.")
+        addPageSelector("Regional Observations", "ro", "Displays conditions from multiple stations on a map.")
+        #addPageSelector("Old Regional Observations", "oldro", "Displays conditions from multiple father-away stations.")
         addPageSelector("36-Hour Forecast", "lf", "Displays three 12-hour forecasts.\nSlide length applies per page.")
         addPageSelector("Extended Forecast", "xf", "Shows conditions for three upcoming days..")
         addPageSelector("Almanac", "al", "Shows moon, sun, and temperature information.")
+        addPageSelector("Tides", "ti", "Shows tidal information for specified areas.")
         addPageSelector("Outlook", "ol", "Predicts trends for the next 30 days.")
-        addPageSelector("Local Radar", "lr", "Shows an animated radar for the last 90 minutes.")
+        addPageSelector("Local Radar", "lr", "Shows an animated radar for the last 90 minutes.", 16)
         addPageSelector("Current Radar", "cr", "Shows a static radar image.")
-        addPageSelector("Intro (Custom)", "intro", "Introductory slide. Place messages in introtext.txt")
+        addPageSelector("Travel Cities Forecast", "tcf", "Shows forecasts for popular travel locations.", 48)
+        addPageSelector("Intro (Custom)", "intro", "Introductory slide. Place messages in introtext.txt", 5)
         addPageSelector("School Forecast (Custom)", "sf", "Hourly conditions for popular school start/end times.")
         addPageSelector("Daypart Forecast (Custom)", "df", "Daypart conditions for the next 6 days.\nSlide length applies per page.")
 
@@ -1008,6 +1085,7 @@ class Launcher(wx.Frame):
             if 9 in flg: misc.add("uppercaseAMPM")
             if 10 in flg: misc.add("fullOldCC")
             if 11 in flg: misc.add("whiteXF")
+            if 12 in flg: misc.add("oldtcf")
 
             items.append(("mainloc", str(mainloc.GetValue())))
             items.append(("mainloc2", str(mainloc2.GetValue())))
@@ -1022,6 +1100,8 @@ class Launcher(wx.Frame):
 
             items.append(("crawls", [(crawlentry[i].GetValue(), crawlenable[i].GetValue()) for i in range(10)]))
             items.append(("obsloc", [[obsloc[i].GetValue(), obsname[i].GetValue()] for i in range(7)]))
+            items.append(("reglocs", rlocent.GetStrings()))
+            items.append(("regnames", rnameent.GetStrings()))
             items.append(("outputs", outs.GetStrings()))
             if schedmins.GetValue().strip():
                 items.append(("schedule", [int(e.strip()) for e in schedmins.GetValue().split(",")]))
@@ -1052,6 +1132,7 @@ class Launcher(wx.Frame):
             items.append(("smoothscale", smoothscale.GetValue()))
             items.append(("musicsetting", musicsetting.GetSelection()))
             items.append(("crawllen", crawllen.GetValue()))
+            items.append(("tidal", (t1i.GetValue(), t2i.GetValue(), t1n.GetValue(), t2n.GetValue())))
             iv = ins.GetValue()
             try:
                 iv = int(iv)
@@ -1063,12 +1144,16 @@ class Launcher(wx.Frame):
                 "Current Conditions": "cc",
                 "Old Current Conditions": "oldcc",
                 "Latest Observations": "lo",
+                "Regional Observations": "ro",
+                "Old Regional Observations": "oldro",
                 "36-Hour Forecast": "lf",
                 "Extended Forecast": "xf",
                 "Local Radar": "lr",
                 "Current Radar": "cr",
                 "Almanac": "al",
                 "Outlook": "ol",
+                "Travel Cities Forecast": "tcf",
+                "Tides": "ti",
                 "School Forecast (Custom)": "sf",
                 "Daypart Forecast (Custom)": "df",
                 "Intro (Custom)": "intro"
@@ -1152,9 +1237,9 @@ class Launcher(wx.Frame):
         
         about = wx.Panel(self.nb)
         aboutsizer = wx.BoxSizer(wx.VERTICAL)
-        abouttext = wx.StaticText(about, label="FreeStar 4k Launcher\nVersion 1.1.2", style=wx.ALIGN_CENTER)
+        abouttext = wx.StaticText(about, label="FreeStar 4k Launcher\nVersion 1.2", style=wx.ALIGN_CENTER)
         logo = wx.StaticBitmap(about, bitmap=wx.Bitmap("launcher/icon_128x128.png", wx.BITMAP_TYPE_PNG))
-        abouttext2 = wx.StaticText(about, label="Developed by 9D Crew\nA special thanks to COLSTER for helping with gathering STAR fonts!\nThanks to Nick S. and Malek Masoud for creating the icons used by this simulator.\nThanks to Bill Goodwill for contributing to The Weather Channel community by creating the WS4000 simulator.\nIf you are Bill Goodwill, creator of the WS4000 Simulator, please do not use FreeStar simulators.\nThis program is licensed under the GNU General Public License v3.0.\nFor questions, visit https://freestar.lewolfyt.cc/", style=wx.ALIGN_CENTER)
+        abouttext2 = wx.StaticText(about, label="Developed by 9D Crew\nA special thanks to COLSTER for helping with gathering STAR fonts!\nThanks to Nick S. and Malek Masoud for creating the icons used by this simulator.\nThanks to Bill Goodwill for contributing to The Weather Channel community by creating the WS4000 simulator.\nThis program is licensed under the GNU General Public License v3.0.\nFor questions, visit https://freestar.lewolfyt.cc/", style=wx.ALIGN_CENTER)
         aboutsizer.Add(abouttext, 0, wx.ALL | wx.ALIGN_CENTER, 10)
         aboutsizer.Add(logo, 0, wx.ALL | wx.ALIGN_CENTER, 10)
         aboutsizer.Add(abouttext2, 1, wx.ALL | wx.ALIGN_CENTER, 10)
@@ -1162,7 +1247,7 @@ class Launcher(wx.Frame):
         
         self.nb.AddPage(page1, "Presentation") #graphics settings
         self.nb.AddPage(page2, "Main Locations") #main+alternate locations
-        self.nb.AddPage(page3, "Local Locations") #local/close locations
+        self.nb.AddPage(page3, "Other Locations") #local/close locations
         #self.nb.AddPage(page4, "Audio") #music/sound settings
         self.nb.AddPage(page5, "Flavor") #which slides to show and in what order
         self.nb.AddPage(page6, "LDL") #ldl timing and text

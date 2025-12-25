@@ -9,8 +9,9 @@ import pygame as pg
 import requests as r
 from io import BytesIO
 import runpy
+import gc
 
-VERSION = "1.1.2"
+VERSION = "1.2"
 
 audiorate = 44100
 widescreen = False
@@ -114,6 +115,34 @@ adevice = None
 
 vencoder = "libx264"
 
+tcflocs = [
+    ("Atlanta, GA", "Atlanta"),
+    ("Boston, MA", "Boston"),
+    ("Chicago, IL", "Chicago"),
+    ("Cleveland, OH", "Cleveland"),
+    ("Dallas, TX", "Dallas"),
+    ("Denver, CO", "Denver"),
+    ("Detroit, MI", "Detroit"),
+    ("Hartford, CT", "Hartford"),
+    ("Houston, TX", "Houston"),
+    ("Indianapolis, IN", "Indianapolis"),
+    ("Los Angeles, CA", "Los Angeles"),
+    ("Miami, FL", "Miami"),
+    ("Minneapolis, MN", "Minneapolis"),
+    ("New York, NY", "New York"),
+    ("Norfolk, VA", "Norfolk"),
+    ("Orlando, FL", "Orlando"),
+    ("Philadelphia, PA", "Philadelphia"),
+    ("Pittsburgh, PA", "Pittsburgh"),
+    ("St. Louis, MO", "St. Louis"),
+    ("San Francisco, CA", "San Francisco"),
+    ("Seattle, WA", "Seattle"),
+    ("Syracuse, NY", "Syracuse"),
+    ("Tampa, FL", "Tampa"),
+    ("Washington DC", "Washington DC")
+]
+tcflocs = [[*e, None, None] for e in tcflocs]
+
 mute = False
 
 crawllen = 40
@@ -144,6 +173,9 @@ try:
     obsloc = [o for o in conf.obsloc if o[0] and o[1]]
     if lsort:
         obsloc = sorted(obsloc, key=lambda o : o[1])
+    rl = getattr(conf, "reglocs", [])
+    rn = getattr(conf, "regnames", [])
+    reglocs = [[rl[i], rn[i], None, None] for i in range(min(len(rl), len(rn)))]
     outputs = [o for o in conf.outputs if not o.startswith("#")]
     ldlfeed = conf.ldlfeed
     ldlbg = conf.ldlbg
@@ -174,6 +206,7 @@ try:
     lfmusic = getattr(conf, "musicsetting", 0)
     smoothscale = getattr(conf, "smoothscale", True)
     crawllen = getattr(conf, "crawllen", 40)
+    tidal = getattr(conf, "tidal", ("", "", "", ""))
 except ModuleNotFoundError:
     print("Configuration not found! Try saving your configuration again.")
     exit(1)
@@ -240,7 +273,7 @@ wxdata = None
 # with open(os.path.expanduser("~/wxdata.json"), "r") as f:
 #     wxdata = json.loads(f.read())
 
-aldata = {"sun": {}, "moon": []}
+aldata = {"sun": {}, "moon": [], "tidal": [None, None]}
 
 # wxdata = {
 #     "current": {
@@ -372,7 +405,9 @@ bg_c = [(64, 33, 98),  (80, 39, 88), (98, 47, 75), (117, 55, 62), (134, 62, 51),
 #bg_c = [(44, 24, 112), (64, 33, 98), (80, 39, 88), (98, 47, 75), (117, 55, 62), (134, 62, 51), (153, 70, 38), (168, 77, 28), (184, 83, 17)]
 ban_c = [(209, 94, 0), (184, 83, 17), (168, 77, 28), (153, 70, 38), (117, 55, 62), (98, 47, 75), (80, 39, 88), (64, 33, 98)]
 ban_c = list(reversed(bg_c))
-box_c = [(52, 88, 168), (52, 80, 152), (48, 72, 140), (44, 64, 124), (40, 46, 112)]
+box_c = [(60, 104, 192), (52, 88, 168), (48, 72, 140), (40, 56, 112), (40, 44, 96)]
+tcf_c = [(22, 59, 133), (18, 47, 119), (13, 35, 105), (9, 24, 92), (4, 12, 78), (4, 12, 78), (4, 12, 78), (9, 24, 92), (13, 35, 105), (18, 47, 119), (22, 59, 133)]
+tcf_bg = draw_palette_gradient(pg.Rect(0, 0, 768, 72*4), tcf_c)
 ldl_c = (40, 56, 112)
 outer_c = (44, 24, 112)
 
@@ -434,10 +469,13 @@ def draw_bg(top_offset=0, bh_offset=0, all_offset=0, special=None, box=True):
             pg.draw.rect(win, box_c[3], pg.Rect(71+xoff, 99-all_offset+77*i+9, 604, 58+adjust))
             pg.draw.rect(win, box_c[4], pg.Rect(74+xoff, 102-all_offset+77*i+9, 598, 52+adjust))
     
+
+def draw_ldl(top_offset=0, bh_offset=0, all_offset=0):
     pg.draw.rect(win, ldl_c, pg.Rect(0, 400-all_offset-bh_offset, screenw, 80+all_offset+bh_offset))
     pg.draw.rect(win, (33, 26, 20), pg.Rect(0, 400-all_offset-bh_offset, screenw, 2))
-    pg.draw.rect(win, (120, 120, 222), pg.Rect(0, 402-all_offset-bh_offset, screenw, 2))
-    
+    pg.draw.rect(win, (230, 230, 230), pg.Rect(0, 402-all_offset-bh_offset, screenw, 2))
+
+def draw_banner(top_offset=0, bh_offset=0, all_offset=0):
     pg.draw.rect(win, outer_c, pg.Rect(0, 0-all_offset, screenw, 90))
     pg.draw.rect(win, ban_c[0], pg.Rect(0, 30-all_offset, screenw, 9))
     pg.draw.rect(win, ban_c[1], pg.Rect(0, 38-all_offset, screenw, 9))
@@ -546,7 +584,7 @@ regionalicontable = [
     "Rain-Snow-1992",
     "Rain-Sleet",
     "Wintry-Mix-1992",
-    "Freezing-Rain-1992 ",
+    "Freezing-Rain-1992",
     "Rain-1992",
     "Freezing-Rain-1992",
     "Shower",
@@ -645,6 +683,10 @@ mainicon = pg.image.load_animation("icons_cc/Partly-Cloudy.gif")
 ldllficon = pg.image.load_animation("icons_reg/Partly-Cloudy.gif")
 xficons = [None, None, None, None, None, None]
 
+regmap = pg.image.load("regmap.png")
+regmapcut = pg.Surface((768, 480), pg.SRCALPHA)
+regmapcut.fill(_gray)
+
 radardata = None
 
 radar_provider = "apollo"
@@ -697,6 +739,8 @@ def sendtoall(data):
     for connection in connections:
         connsendall(connection, data)
 
+regmappos = ()
+
 def getdata():
     ix = 0
     global wxdata
@@ -706,6 +750,7 @@ def getdata():
     global radardata
     global aldata
     global leds
+    global regmap, regmapcut, regmappos
     datagot = False
     
     while True:
@@ -735,18 +780,46 @@ def getdata():
                     nricon.append((fr.convert_alpha(), ftime))
                 ldllficon = nricon
 
-            for i in range(12):
-                ic = regionalicontable[wxdata['extended']['daypart'][i+4]['iconCode']]
-                if ic:
-                    dficons[i] = [(s.convert_alpha(), ft) for s, ft in pg.image.load_animation(f"icons_reg/{ic}.gif")]
-                else:
-                    dficons[i] = []
+            if "df" in flavor:
+                for i in range(12):
+                    ic = regionalicontable[wxdata['extended']['daypart'][i+4]['iconCode']]
+                    if ic:
+                        dficons[i] = [(s.convert_alpha(), ft) for s, ft in pg.image.load_animation(f"icons_reg/{ic}.gif")]
+                    else:
+                        dficons[i] = []
             
             az = [None, []]
             if wxdata["current"]["alerts"]:
+                a_preprocess = {}
                 for alert in wxdata["current"]["alerts"]:
-                    az[1].append(alert["headline"])
+                    a_preprocess[alert["alertid"]] = alert
+                aas = list(a_preprocess.values())
+                
+                getdetaillist = [x for x in aas if x["significance"] == "W"]
+                keylist = ",".join([x["alertkey"] for x in getdetaillist])
+                
+                almap = {}
+                if keylist:
+                    ll = "https://wx.lewolfyt.cc/alerts?alertkey="+keylist
+                    print(ll)
+                    details = r.get(ll).json()["alerts"]
+                    for alert in details:
+                        almap[alert["alertid"]] = alert["description"].replace("&&", "").replace("\n", " ").strip().rstrip()
+                
+                for alert in aas:
+                    az[1].append((alert["headline"], alert["significance"], alert["rank"],
+                                  None if alert["alertid"] not in almap else almap[alert["alertid"]]))
+            az[1] = sorted(az[1], key=lambda e : e[2])
             alertdata = az
+            
+            lat, long = wxdata["current"]["info"]["geocode"]
+            x, y = mapper((rmappoint1, rmappoint2), lat, long)
+            regmappos = (x, y)
+            x = max(x, 0)
+            y = max(y, 0)
+            x = min(x, regmap.get_width()-screenw)
+            y = min(y, regmap.get_height()-480)
+            regmapcut.blit(regmap, (0, 0), pg.Rect(x, y, screenw, 480))
             
             for i in range(6):
                 ix = i*2+4-(wxdata["extended"]["daypart"][0]["dayOrNight"] == "N")
@@ -761,6 +834,99 @@ def getdata():
             leds[1] = True
         except:
             print(tb.format_exc())
+        
+        if "ti" in flavor:
+            if not "al" in flavor:
+                print("tidaling")
+                if wxdata:
+                    lat, long = wxdata["current"]["info"]["geocode"]
+                    sr1 = r.get(f"https://api.sunrisesunset.io/json?lat={lat}&lng={long}&time_format=unix").json()["results"]
+                    sr2 = r.get(f"https://api.sunrisesunset.io/json?lat={lat}&lng={long}&time_format=unix&date=tomorrow").json()["results"]
+                    aldata["sun"] = {
+                        "sunrise1": int(sr1["sunrise"]),
+                        "sunset1": int(sr1["sunset"]),
+                        "sunrise2": int(sr2["sunrise"]),
+                        "sunset2": int(sr2["sunset"])
+                    }
+                
+            t1 = aldata["tidal"][0]
+            print(f"https://wx.lewolfyt.cc/?id={tidal[0]}")
+            t1data = r.get(f"https://wx.lewolfyt.cc/tides?id={tidal[0]}").json()["tides"]
+            t1list = {"lows": [], "highs": []}
+            for i in range(4):
+                fts = dt.datetime.fromtimestamp(t1data[i]["valid"])
+                t1list[["lows", "highs"][t1data[i]["type"] == "H"]].append((splubby_the_return(fts.strftime("%I:%M%p").lower()+" "+fts.strftime("%a")), t1data[i]["valid"]))
+            aldata["tidal"][0] = t1list
+            
+            t2 = aldata["tidal"][1]
+            t2data = r.get(f"https://wx.lewolfyt.cc/tides?id={tidal[1]}").json()["tides"]
+            t2list = {"lows": [], "highs": []}
+            for i in range(4):
+                fts = dt.datetime.fromtimestamp(t2data[i]["valid"])
+                t2list[["lows", "highs"][t1data[i]["type"] == "H"]].append((splubby_the_return(fts.strftime("%I:%M%p").lower()+" "+fts.strftime("%a")), t1data[i]["valid"]))
+            aldata["tidal"][1] = t2list
+        
+        if "al" in flavor:
+            startdt = dt.date.today()
+            moons = sorted([
+                ("new", ephem.localtime(ephem.next_new_moon(startdt))),
+                ("lq",  ephem.localtime(ephem.next_last_quarter_moon(startdt))),
+                ("fq",  ephem.localtime(ephem.next_first_quarter_moon(startdt))),
+                ("full",  ephem.localtime(ephem.next_full_moon(startdt)))
+            ], key=(lambda p : p[1]))
+            mooninfo = [(
+                {"new": "New", "fq": "First", "lq": "Last", "full": "Full"}[p[0]],
+                p[1].strftime("%h ")+splubby_the_return(p[1].strftime("%d"))
+            ) for p in moons]
+            aldata["moon"] = mooninfo
+            if wxdata:
+                lat, long = wxdata["current"]["info"]["geocode"]
+                sr1 = r.get(f"https://api.sunrisesunset.io/json?lat={lat}&lng={long}&time_format=unix").json()["results"]
+                sr2 = r.get(f"https://api.sunrisesunset.io/json?lat={lat}&lng={long}&time_format=unix&date=tomorrow").json()["results"]
+                aldata["sun"] = {
+                    "sunrise1": int(sr1["sunrise"]),
+                    "sunset1": int(sr1["sunset"]),
+                    "sunrise2": int(sr2["sunrise"]),
+                    "sunset2": int(sr2["sunset"])
+                }
+
+        def get_obsloc(l):
+            global leds
+            try:
+                l[2] = r.get(f"https://wx.lewolfyt.cc/?loc={l[0]}&include=current"+("" if not metric else "&units=m")).json()
+                leds[1] = True
+            except:
+                print(tb.format_exc())
+        print("gre")
+        def get_regloc(l):
+            global leds
+            try:
+                l[2] = r.get(f"https://wx.lewolfyt.cc/?loc={l[0]}&include=current"+("" if not metric else "&units=m")).json()
+                l3 = pg.image.load_animation(f'icons_reg/{regionalicontable[l[2]["current"]["info"]["iconCode"]]}.gif')
+                l[3] = [(l[0].convert_alpha(), l[1]) for l in l3]
+                #print("got reg icon")
+                leds[1] = True
+            except:
+                print(tb.format_exc())
+        def get_tcfloc(l):
+            global leds
+            try:
+                l[2] = r.get(f"https://wx.lewolfyt.cc/?loc={l[0]}&include=extended"+("" if not metric else "&units=m")).json()
+                l3 = pg.image.load_animation(f'icons_reg/{regionalicontable[l[2]["extended"]["daypart"][1+(l[2]["extended"]["daypart"][0]["dayOrNight"]=="D")]["iconCode"]]}.gif')
+                l[3] = [(l[0].convert_alpha(), l[1]) for l in l3]
+                #print("got reg icon")
+                leds[1] = True
+            except:
+                print(tb.format_exc())
+        if "lo" in flavor:
+            for l in obsloc:
+                th.Thread(target=get_obsloc, args=(l,)).start()
+        if "ro" in flavor:
+            for rg in reglocs:
+                th.Thread(target=get_regloc, args=(rg,)).start()
+        if "tcf" in flavor:
+            for tc in tcflocs:
+                th.Thread(target=get_tcfloc, args=(tc,)).start()
         
         try:
             report = r.get(f"https://mesonet.agron.iastate.edu/cgi-bin/afos/retrieve.py?&pil={afos_climate}&center=&limit=1&sdate=&edate=&ttaaii=&order=desc").text
@@ -819,39 +985,7 @@ def getdata():
             leds[1] = True
         except:
             print(tb.format_exc())
-        if "al" in flavor:
-            startdt = dt.date.today()
-            moons = sorted([
-                ("new", ephem.localtime(ephem.next_new_moon(startdt))),
-                ("lq",  ephem.localtime(ephem.next_last_quarter_moon(startdt))),
-                ("fq",  ephem.localtime(ephem.next_first_quarter_moon(startdt))),
-                ("full",  ephem.localtime(ephem.next_full_moon(startdt)))
-            ], key=(lambda p : p[1]))
-            mooninfo = [(
-                {"new": "New", "fq": "First", "lq": "Last", "full": "Full"}[p[0]],
-                p[1].strftime("%h ")+splubby_the_return(p[1].strftime("%d"))
-            ) for p in moons]
-            aldata["moon"] = mooninfo
-            if wxdata:
-                lat, long = wxdata["current"]["info"]["geocode"]
-                sr1 = r.get(f"https://api.sunrisesunset.io/json?lat={lat}&lng={long}&time_format=unix").json()["results"]
-                sr2 = r.get(f"https://api.sunrisesunset.io/json?lat={lat}&lng={long}&time_format=unix&date=tomorrow").json()["results"]
-                aldata["sun"] = {
-                    "sunrise1": int(sr1["sunrise"]),
-                    "sunset1": int(sr1["sunset"]),
-                    "sunrise2": int(sr2["sunrise"]),
-                    "sunset2": int(sr2["sunset"])
-                }
-
-        def get_obsloc(l):
-            global leds
-            try:
-                l[2] = r.get(f"https://wx.lewolfyt.cc/?loc={l[0]}"+("" if not metric else "&units=m")).json()
-                leds[1] = True
-            except:
-                print(tb.format_exc())
-        for l in obsloc:
-            th.Thread(target=get_obsloc, args=(l,)).start()
+        
         
         if "lr" in flavor:
             try:
@@ -892,6 +1026,7 @@ def getdata():
                 print(tb.format_exc())
         leds[6] = False
         sendtoall(f"led 6 0\n".encode())
+        gc.collect()
         for i in range(300):
             tm.sleep(1)
 th.Thread(target=getdata, daemon=True).start()
@@ -912,15 +1047,9 @@ def frender(font, text, aa, color):
 
 fw = 1.1
 
-scalecache = {}
-
 def scalec(og, font, text, color, w):
-    if (font, text, color, w) not in scalecache:
-        sl = pg.transform.smoothscale_by(og, w)
-        scalecache[(font, text, color, w)] = sl
-        return sl
-    else:
-        return scalecache[(font, text, color, w)]
+    sl = pg.transform.smoothscale_by(og, w)
+    return sl
 
 def renderoutline(font, text, x, y, width, color=(0, 0, 0), surface=win, og=None, ofw=None):
     if og is None:
@@ -997,22 +1126,34 @@ for char in "qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM-":
     if c > font_tallest[starfont32]:
         font_tallest[starfont32] = c
 
-chars        = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[°]^_'abcdefghijklmnopqrstuvwxyz{|}~"
+chars = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[°]^_'abcdefghijklmnopqrstuvwxyz{|}~ "
+
+
 chars_symbol = " ↑↓"
+def quickread(file):
+    with open(file, "r") as f:
+        return f.read().strip().rstrip()
 
 def loadjrfont(name):
-    return (pg.image.load(f"jrfonts/fill/{name}.png").convert_alpha(), pg.image.load(f"jrfonts/shadow/{name}.png").convert_alpha())
-jrfontnormal = loadjrfont("normal")
+    surfs = (pg.image.load(f"jrfonts/fill/{name}.png").convert_alpha(), pg.image.load(f"jrfonts/shadow/{name}.png").convert_alpha())
+    widths = quickread(f"jrfonts/fill/{name}.widths.txt").split(",")
+    offsets = quickread(f"jrfonts/fill/{name}.offsets.txt").split(",")
+    off2 = {}
+    for i, v in enumerate(offsets):
+        off2[chars[i]] = -int(v)
+    widths = [int(x) for x in widths]
+    return surfs, widths, off2
+jrfontnormal, jrwidthsnormal, jroffsetsnormal = loadjrfont("normal")
 
-jrfontradaralert = loadjrfont("normal")
+jrfontradaralert, _, _ = loadjrfont("normal")
 jrfontradaralert[0].fill((198, 178, 154, 255), special_flags=pg.BLEND_RGBA_MULT)
 jrfontradaralert[1].fill((4, 68, 4, 0), special_flags=pg.BLEND_RGBA_ADD)
 
-jrfonticon = loadjrfont("icon")
-jrfontsmall = loadjrfont("small")
-jrfonttall = loadjrfont("tall")
-jrfontsymbol = loadjrfont("symbol")
-jrfonttravel = loadjrfont("travel")
+jrfonticon, jrwidthsison, jroffsetsicon = loadjrfont("icon")
+jrfontsmall, jrwidthssmall, jroffsetssmall = loadjrfont("small")
+jrfonttall, jrwidthstall, jroffsetstall = loadjrfont("tall")
+jrfontsymbol, _, _ = loadjrfont("symbol")
+jrfonttravel, jrwidthstravel, jroffsetstravel = loadjrfont("travel")
 
 charset_col = {}
 
@@ -1041,13 +1182,22 @@ def drawchar(char, cset, x, y, color):
 white = (215, 215, 215)
 
 @profiling_sect("text")
-def drawshadow(font, text, x, y, offset, color=white, surface=win, mono=0, ofw=None, bs=False, char_offsets=char_offsets_default, upper=False, jr_override=None, shadow=True):
+def drawshadow(font, text, x, y, offset, color=white, surface=win, mono=0, ofw=None, bs=False, char_offsets=char_offsets_default, upper=False, jr_override=None, shadow=True, variable=None, leftalign=False):
     if text == "":
         return
     if not jr:
         t = [c for ch in text if c not in "±≠"]
         text = "".join(t)
     if jr:
+        offsetx = 0
+        if leftalign:
+            for i, char in enumerate(text):
+                if char in "±≠":
+                    continue
+                if variable:
+                    offsetx -= (variable[chars.index(char)]+1) if variable[chars.index(char)] else 15
+                else:
+                    offsetx -= m.floor(mono)
         fx = [[], []] #shake, nofill
         fxa = [False, False]
         sheet = jrfontnormal
@@ -1061,15 +1211,26 @@ def drawshadow(font, text, x, y, offset, color=white, surface=win, mono=0, ofw=N
             sheet = jrfonticon
         if jr_override:
             sheet = jr_override
+        xx = offsetx*1
         if bs:
             if shadow:
                 for i, char in enumerate(text):
-                    drawchar(char, sheet[1], x+i*m.floor(mono)+2+char_offsets.get(char, 0), y+2, None)
+                    drawchar(char, sheet[1], x+xx+2+char_offsets.get(char, 0), y+2, None)
+                    if variable:
+                        xx += (variable[chars.index(char)]+1) if variable[chars.index(char)] else 15
+                    else:
+                        xx += m.floor(mono)
+            xx = offsetx*1
             for i, char in enumerate(text):
-                drawchar(char, sheet[0], x+i*m.floor(mono)+2+char_offsets.get(char, 0), y+2, color if type(color) != list else color[i])
+                drawchar(char, sheet[0], x+xx+2+char_offsets.get(char, 0), y+2, color if type(color) != list else color[i])
+                if variable:
+                    xx += (variable[chars.index(char)]+1) if variable[chars.index(char)] else 15
+                else:
+                    xx += m.floor(mono)
         io = 0
         ic = 0
         if shadow:
+            xx = offsetx*1
             for i, char in enumerate(text):
                 if char == "±":
                     io += 1
@@ -1083,9 +1244,14 @@ def drawshadow(font, text, x, y, offset, color=white, surface=win, mono=0, ofw=N
                 if fxa[0]:
                     fxo = (rd.randint(-1, 1), rd.randint(-1, 1))
                     fx[0].append(fxo)
-                drawchar(char, sheet[1], x+fxo[0]+(i-io)*m.floor(mono)+char_offsets.get(char, 0), y+fxo[1], None)
+                drawchar(char, sheet[1], x+fxo[0]+xx+char_offsets.get(char, 0), y+fxo[1], None)
+                if variable:
+                    xx += (variable[chars.index(char)]+1) if variable[chars.index(char)] else 15
+                else:
+                    xx += m.floor(mono)
         fxa = [False, False]
         io = 0
+        xx = offsetx*1
         for i, char in enumerate(text):
             if char == "±":
                 io += 1
@@ -1101,8 +1267,11 @@ def drawshadow(font, text, x, y, offset, color=white, surface=win, mono=0, ofw=N
             if fxa[0]:
                 fxo = fx[0][ic]
                 ic += 1
-            drawchar(char, sheet[0], x+fxo[0]+(i-io)*m.floor(mono)+char_offsets.get(char, 0), y+fxo[1], color if type(color) != list else color[i])
-        
+            drawchar(char, sheet[0], x+fxo[0]+xx+char_offsets.get(char, 0), y+fxo[1], color if type(color) != list else color[i])
+            if variable:
+                xx += (variable[chars.index(char)]+1) if variable[chars.index(char)] else 15
+            else:
+                xx += m.floor(mono)
         return
     
     text=str(text)
@@ -1208,6 +1377,9 @@ def mapper(ref_points, lat, lon):
 bbox = (-127.680, 21.649, -66.507, 50.434)
 mappoint1 = [(bbox[3], bbox[0]), (-screenw//4, -120)]
 mappoint2 = [(bbox[1], bbox[2]), (4100-screenw//4, 1920-120)]
+
+rmappoint1 = [(bbox[3], bbox[0]), (-screenw//2, -240)]
+rmappoint2 = [(bbox[1], bbox[2]), (4100-screenw//2, 1920-240)]
 
 def connsendall(conn, data):
     try:
@@ -1334,15 +1506,19 @@ def drawpage_fmt(lines : list, formatting : list):
             yy += linespacing
 
 def drawpage(lines : list, smalltext="", shift=0, vshift=0):
-    clines : list = lines[(shift*7):(shift*7+7)].copy()
+    clines : list = lines.copy()
     ss = 0
     st = True
     xoff = (screenw-768)//2
+    ld = 0
     for i, line in enumerate(clines):
         if line == '' and st:
             ss += 1
         else:
             st = False
+            ld += 1
+        if ld == 8:
+            break
         drawshadow(starfont32, line, 80+xoff, 109+linespacing*(i-ss)+ldl_y*1.25+vshift, 3, mono=gmono, char_offsets={})
     if smalltext:
         drawshadow(smallfont, smalltext, 80+xoff, 109-32+ldl_y+vshift, 3, mono=gmono, char_offsets={})
@@ -1535,13 +1711,20 @@ moon_new = pg.image.load("moon/New-Moon.gif").convert_alpha()
 def domusic():
     if mute:
         return
+    mus = None
+    last = ""
     while True:
         musicon = True
         if ldlmode and lfmusic:
             musicon = False
         if musicon:
             if not musicch.get_busy():
-                musicch.play(pg.mixer.Sound(rd.choice(musicfiles)))
+                allowed_this_time = musicfiles.copy()
+                if (len(musicfiles) > 1) and last:
+                    allowed_this_time.remove(last)
+                last = rd.choice(allowed_this_time)
+                mus = pg.mixer.Sound(last)
+                musicch.play(mus)
         else:
             musicch.stop()
         tm.sleep(0.02)
@@ -1880,7 +2063,8 @@ with open("introtext.txt") as f:
     intros = f.read().strip().rstrip().split("\n")
 def drawreg(surf, pos, ix=0):
     if surf:
-        win.blit(surf[ix][0], (pos[0]-surf[ix][0].get_width()//2, pos[1]-surf[ix][0].get_height()//2))
+        #win.blit(surf[ix][0], (pos[0]-surf[ix][0].get_width()//2, pos[1]-surf[ix][0].get_height()//2))
+        win.blit(pg.transform.smoothscale_by(surf[ix][0], (1.2, 1)), (pos[0]-32, pos[1]-19))
 while working:
     for event in pg.event.get():
         if event.type == pg.MOUSEBUTTONDOWN:
@@ -2075,8 +2259,6 @@ while working:
                 for i in range(3+widescreen):
                     win.blit(xfbg, (46+230*i+13*widescreen, 101-round(ao*1.5)))
     profiling_end("ops")
-    if not ldlmode:
-        win.blit(logo, (txoff//3, ldl_y))
     
     if ui and not ldlmode:
         if slide in ["cc", "oldcc"]:
@@ -2217,9 +2399,10 @@ while working:
                     if icontable[wxdata['current']['info']['iconCode']] in icon_offset:
                         ioff = icon_offset[icontable[wxdata['current']['info']['iconCode']]]
                     win.blit(mm, (220-mm.width//2+ioff[0]+txoff, 215-mm.height//2+ioff[1]+ldl_y))
+                    del mm
                     
                     cctx = ccphrase
-                    drawshadow(extendedfont, cctx, 168-18*(m.floor(len(cctx)/2)-2)+9+txoff, 139+ldl_y, 3, ofw=1.1, mono=18.9, char_offsets={":": 2, "i":2}, upper=veryuppercase)
+                    drawshadow(extendedfont, cctx, 168-18*(len(cctx)/2-2)+9+txoff, 139+ldl_y, 3, ofw=1.1, mono=18.9, char_offsets={":": 2, "i":2}, upper=veryuppercase)
                     if wxdata["current"]["conditions"]["windSpeed"] == 0:
                         drawshadow(extendedfont, f"Wind: Calm", 95+txoff, 303+ldl_y, 3, ofw=1.1, mono=18.9, char_offsets={":": 2, "i":2}, upper=veryuppercase)
                     else:
@@ -2257,7 +2440,7 @@ while working:
             if veryuppercase:
                 page = [p.upper() for p in page]
             drawpage2(page, f"               °{temp_symbol} WEATHER   WIND")
-        elif slide == "ro":
+        elif slide == "oldro":
             drawshadow(startitlefont, your+"Latest Observations", 181, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
             drawpage(["Cincinnati Apt 63 Cloudy    S 23",
                     "Birmingham     63 T'Storm     16",
@@ -2268,20 +2451,56 @@ while working:
                     "Pensacola Arpt 73 P Cloudy    23"],
                     f"                    WEATHER   °{temp_symbol}")
         elif slide == "lf":
-            drawshadow(startitlefont, your+"Local Forecast" if not ("your" in old) else "Your Local Forecast", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+            drawshadow(startitlefont, your+"Local Forecast", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
             #win.blit(pg.transform.smoothscale_by(noaa, (1.2, 1)), (412, 40))
             
+            alert36 = False
+            allines = []
+            
+            for alert in alertdata[1]:
+                if alert[1] != "W":
+                    allines = [lin.strip().rstrip() for lin in wraptext(alert[0].upper(), 30)]
+                    finallines = []
+                    for line in allines:
+                        finallines.append(
+                            textmerge("*"+30*" "+"*", m.ceil(16-len(line)/2)*" "+line)
+                        )
+                    alert36 = True
+                    allines = finallines + [""]
+                    break
+            
             if wxdata:
-                fcsts = wxdata["extended"]["daypart"]
-                # txt = ""
-                # for fcst in fcsts[:3]:
-                #     txt += (fcst["name"][0].upper() + fcst["name"][1:].lower()) + "..." + fcst["narration"]
-                #     txt += "\n"
-                text = (fcsts[subpage]["name"][0].upper() + fcsts[subpage]["name"][1:].lower()) + "..." + fcsts[subpage]["narration"]
-                if veryuppercase:
-                    text = text.upper()
-                
-                drawpage(wraptext(text))
+                if not alert36:
+                    fcsts = wxdata["extended"]["daypart"]
+                    # txt = ""
+                    # for fcst in fcsts[:3]:
+                    #     txt += (fcst["name"][0].upper() + fcst["name"][1:].lower()) + "..." + fcst["narration"]
+                    #     txt += "\n"
+                    text = (fcsts[subpage]["name"][0].upper() + fcsts[subpage]["name"][1:].lower()) + "..." + fcsts[subpage]["narration"]
+                    if veryuppercase:
+                        text = text.upper()
+                    
+                    drawpage(wraptext(text))
+                else:
+                    fcsts = wxdata["extended"]["daypart"]
+                    
+                    all_lines = allines.copy()
+                    
+                    for i in range(3):
+                        text = (fcsts[i]["name"][0].upper() + fcsts[i]["name"][1:].lower()) + "..." + fcsts[i]["narration"]
+                        if veryuppercase:
+                            text = text.upper()
+                        all_lines.extend(wraptext(text))
+                        all_lines.extend([""])
+                    if all_lines[7] == "":
+                        all_lines.pop(7)
+                    if all_lines[14] == "":
+                        all_lines.pop(14)
+                    if len(all_lines) > 21:
+                        if all_lines[21] == "":
+                            all_lines.pop(21)
+                    
+                    drawpage(all_lines[(subpage*7):])
         elif slide == "lr":
             if radardata:
                 win.blit(radardata[radaridx][0], (0, 0))
@@ -2336,6 +2555,7 @@ while working:
                     mn = pg.transform.smoothscale_by({"New": moon_new, "First": moon_fq, "Full": moon_full, "Last": moon_lq}[mt], (1.2, 1))
 
                     win.blit(mn, (80+xx+txoff, 265+ldl_y))
+                    del mn
                     
                     drawshadow(starfont32, dat, 76+xx+txoff, 354+ldl_y, 3, mono=gmono, char_offsets={})
         elif slide == "xf":
@@ -2385,6 +2605,7 @@ while working:
                         xi = xficons[i+subpage*3][int(iconidx3%len(xficons[i+subpage*3]))][0]
                         xi = pg.transform.smoothscale_by(xi, (1.2, 1))
                         win.blit(xi, (120+i*230+27-xi.get_width()/2+to, 200-xi.get_height()/2+yo))
+                        del xi
             else:
                 drawshadow(starfont32, "Temporarily Unavailable", 177, 218, 3, mono=gmono)
         elif slide == "ol":
@@ -2453,7 +2674,7 @@ while working:
                     else:
                         wt = textmerge(wc, f"   {ws}")
                     drawshadow(starfont32, wt, 62+14+txoff+18*20, 96+14+ldl_y+77*i+9, 3, mono=gmono)
-                    drawreg(dficons[i], (640+txoff, 96+14+ldl_y+77*i+24), ix=(m.floor(iconidx2) % len(dficons[i])))
+                    drawreg(dficons[i], (640+txoff-15, 96+14+ldl_y+77*i+24), ix=(m.floor(iconidx2) % len(dficons[i])))
         elif slide == "intro":
             drawshadow(startitlefont, "Welcome!", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
 
@@ -2467,6 +2688,83 @@ while working:
                 tx, dr = drawing(line, dr, True)
                 drawshadow(starfont32, tx, 98+txoff, 109+linespacing*1.75+32*i+ldl_y, 3, mono=gmono, char_offsets={})
                 #dr -= len(line.replace(" ", ""))
+        elif slide == "ro":
+            win.blit(regmapcut, (0, 0))
+            drawshadow(startitlefont, "Regional", 194+txoff//3, 25+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
+            drawshadow(startitlefont, "Observations", 194+txoff//3, 52+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
+            
+            def drawregloc(name, temp, idx, pos):
+                if reglocs[idx][2]:
+                    lat, long = reglocs[idx][2]["current"]["info"]["geocode"]
+                    xx, yy = mapper((rmappoint1, rmappoint2), lat, long)
+                    xx -= regmappos[0]-screenw//2
+                    yy -= regmappos[1]-240
+                else:
+                    xx, yy = -300, -300
+                xx += 8
+                xx -= 60
+                yy -= 18
+                if reglocs[idx][3]:
+                    drawreg(reglocs[idx][3], (xx+60, yy+18), (m.floor(iconidx2) % len(reglocs[idx][3])))
+                drawshadow(starfont32, name, xx-round(len(name)*15/2)+34, yy-25, 3, mono=15)
+                drawshadow(largefont32, str(temp), xx+25, yy, 3, mono=15, color=yeller, char_offsets=jroffsetstall, jr_override=jrfonttall, variable=jrwidthstall, leftalign=True)
+            
+            for i, lc in enumerate(reglocs):
+                drawregloc(lc[1], "" if not lc[2] else lc[2]["current"]["conditions"]["temperature"], i, (150, 150))
+        elif slide == "tcf":
+            pre = 2
+            post = 10
+            roll = (48*seconds-slideinterval) - pre*seconds
+            rt = (48-pre-post)
+            roll = max(roll, 0)
+            
+            max_y = len(tcflocs) * 72 - 72 * 4
+            yy = -min(max_y*roll/(rt*seconds), max_y)
+            
+            if "oldtcf" in old:
+                for i in range(4):
+                    win.blit(tcf_bg, (0, 91+(i-2)*tcf_bg.get_height()+18+yy%tcf_bg.get_height()))
+            else:
+                win.fill((0, 0, 64))
+            for i, name in enumerate(tcflocs):
+                drawshadow(largefont32, name[1], 96, 72*i+120+yy, 3, color=yeller, mono=19, variable=jrwidthstravel, char_offsets=jroffsetstravel)
+                if tcflocs[i][2]:
+                    drawshadow(largefont32, padtext(str(tcflocs[i][2]["extended"]["daily"][1]["tempMin"]), 3), 540-21, 72*i+120+yy, 3, color=yeller, mono=21)
+                    drawshadow(largefont32, padtext(str(tcflocs[i][2]["extended"]["daily"][1]["tempMax"]), 3), 613-21, 72*i+120+yy, 3, color=yeller, mono=21)
+                if tcflocs[i][3]:
+                    drawreg(tcflocs[i][3], (430, 72*i+120+yy+20), (m.floor(iconidx2) % len(tcflocs[i][3])))
+            
+            pg.draw.rect(win, outer_c, pg.Rect(0, 91, screenw, 20))
+            drawshadow(smallfont, "LOW", 479+round((screenw-768)*2/3)+54, 75, 3, color=yeller, mono=gmono, char_offsets={})
+            drawshadow(smallfont, "HIGH", 479+round((screenw-768)*2/3)+54+66, 75, 3, color=yeller, mono=gmono, char_offsets={})
+        elif slide == "ti":
+            lines = ["", "", "", "", "", "", ""]
+            line = tidal[2] + " Tides"
+            lines[0] = (m.floor(16-len(line)/2)*" "+line)
+            if aldata["tidal"][0]:
+                lines[1] = textmerge(textmerge("Lows:",
+                                    " "*7+padtext(aldata["tidal"][0]["lows"][0][0], 11)),
+                                    " "*21+padtext(aldata["tidal"][0]["lows"][1][0], 11))
+                lines[2] = textmerge(textmerge("Highs:",
+                                    " "*7+padtext(aldata["tidal"][0]["highs"][0][0], 11)),
+                                    " "*21+padtext(aldata["tidal"][0]["highs"][1][0], 11))
+            line = tidal[3] + " Tides"
+            lines[3] = (m.floor(16-len(line)/2)*" "+line)
+            if aldata["tidal"][1]:
+                lines[4] = textmerge(textmerge("Lows:",
+                                    " "*7+padtext(aldata["tidal"][1]["lows"][0][0], 11)),
+                                    " "*21+padtext(aldata["tidal"][1]["lows"][1][0], 11))
+                lines[5] = textmerge(textmerge("Highs:",
+                                    " "*7+padtext(aldata["tidal"][1]["highs"][0][0], 11)),
+                                    " "*21+padtext(aldata["tidal"][1]["highs"][1][0], 11))
+            
+            lines[6] = "   Sunrise         Set"
+            if aldata["sun"]:
+                s1 = dt.datetime.fromtimestamp(aldata["sun"]["sunrise1"])
+                s2 = dt.datetime.fromtimestamp(aldata["sun"]["sunset1"])
+                lines[6] = textmerge(textmerge("   Sunrise         Set", " "*11+splubby_the_return(s1.strftime("%I:%M%p").lower())), " "*23+splubby_the_return(s2.strftime("%I:%M%p").lower()))
+            
+            drawpage(lines)
         elif slide == "test":
             drawshadow(startitlefont, "Test Page", 181, 25+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True)
             drawshadow(startitlefont, "of Awesomeness", 181, 54+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True)
@@ -2476,7 +2774,16 @@ while working:
     al1 = False
     if not alerting:
         al1 = True
-    alerting = (len(alertdata[1]) > 0)
+    
+    alerting = False
+    arank = 99999999
+    for i, alert in enumerate(alertdata[1]):
+        if alert[1] == "W":
+            alerting = True
+            alertactive = i+0
+            arank = alert[2]
+            break
+    
     if alerting != switches[3]:
         switches[3] = alerting
         sendtoall(f"switch 3 {int(alerting)}\n".encode())
@@ -2489,6 +2796,8 @@ while working:
         colorbug_started = False
     #here for testing
     #pg.draw.rect(win, (187, 17, 0), pg.Rect(0, 404, screenw, 76))
+    if slide not in ["cr", "lr"]:
+        draw_ldl(all_offset=ao, bh_offset=ao//2)
     ldl_y_off = -2
     if (ldlon and not serial) or not ldlmode or alerting:
         if serial:
@@ -2583,7 +2892,8 @@ while working:
                     drawshadow(starfont32, "               High:" , xx+85+50+ldlextra*2*18, 409, 3, mono=18, color=yeller)
                     drawshadow(starfont32,f"                    {padtext(wxdata['extended']['daypart'][1]['temperature'], 3)}°{temp_symbol}" , xx+85+54+ldlextra*2*18, 409, 3, mono=18)
                     win.blit(mm, (xx+337-25, 418-15))
-                
+                del mm
+            
             if ldldrawing:
                 ldldrawidx += 2.5
                 if veryuppercase and ldlidx != 0:
@@ -2611,8 +2921,7 @@ while working:
                 ldldrawidx = 0
         elif (not (slide in ["lr", "cr"])) or alerting:
             if alerting:
-                alertactive %= len(alertdata[1])
-                crawl = alertdata[1][alertactive].upper()
+                crawl = alertdata[1][alertactive][3].upper()
             else:
                 if len(crawls) > 0:
                     crawl = crawls[crawlactive]
@@ -2623,7 +2932,13 @@ while working:
             if alerting:
                 pg.draw.rect(win, ((187, 17, 0) if (slide not in ["lr", "cr"] or ("warnpalbug" not in old)) else (128, 16, 0)) if True or "ADVISORY" not in crawl else (126, 31, 0), pg.Rect(0, 404-ao-ao//2, screenw, 76+ao+ao//2))
             jrf = jrfontnormal
-            if (((slide in ["lr", "cr"]) or (colorbug_started and colorbug_nat)) and ("warnpalbug" in old) and alerting):
+            if (
+                (
+                    (slide in ["lr", "cr"]) or (colorbug_started and colorbug_nat and ldlmode)
+                )
+                and ("warnpalbug" in old)
+                and alerting
+                ):
                 jrf = jrfontradaralert
             drawshadow(starfont32, crawl, round(screenw-crawlscroll), 403+ldl_y_off, 3, mono=gmono, char_offsets={}, jr_override=jrf)
             if not alerting:
@@ -2642,7 +2957,48 @@ while working:
                 crawltime = crawllen*seconds
                 crawling = False
                 nextcrawlready = True
-    
+
+    if slide not in ["cr", "lr"]:
+        draw_banner(all_offset=ao, bh_offset=ao//2)
+        win.blit(logo, (txoff//3, ldl_y))
+    if slide == "oldcc" or (slide == "cc" and textpos > 1):
+        ln = f"Now at {locname}"
+        drawshadow(startitlefont, ln, 194+txoff//3, 30, 3, mono=18, ofw=1.07, upper=veryuppercase)
+    elif slide == "cc":
+        drawshadow(startitlefont, "Current", 194+txoff//3, 25+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
+        drawshadow(startitlefont, "Conditions", 194+txoff//3, 52+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "lo":
+        drawshadow(startitlefont, "Latest Observations", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "oldro":
+        drawshadow(startitlefont, your+"Latest Observations", 181, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "lf":
+        drawshadow(startitlefont, your+"Local Forecast", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "al":
+        drawshadow(startitlefont, "Almanac", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "xf":
+        drawshadow(startitlefont, efname, 180+txoff//3, 23+ldl_y, 3, mono=15, ofw=1.07, upper=veryuppercase)
+        drawshadow(startitlefont, "Extended Forecast", 180+txoff//3, 49+ldl_y, 3, mono=15, ofw=1.07, upper=veryuppercase, color=yeller)
+    elif slide == "ol":
+        drawshadow(startitlefont, "Outlook", 194+txoff//3, 39+ldl_y, 3, color=yeller, mono=16, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "sf":
+        drawshadow(startitlefont, "School", 194+txoff//3, 25+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
+        drawshadow(startitlefont, "Forecast", 194+txoff//3, 52+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "df":
+        drawshadow(startitlefont, "Daypart Forecast", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "intro":
+        drawshadow(startitlefont, "Welcome!", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "ro":
+        drawshadow(startitlefont, "Regional", 194+txoff//3, 25+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+        drawshadow(startitlefont, "Observations", 194+txoff//3, 52+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "tcf":
+        drawshadow(startitlefont, "Travel Forecast", 181+txoff//3, 25+ldl_y, 3, color=yeller, mono=18, ofw=1.07, upper=veryuppercase)
+        drawshadow(startitlefont, f"For {nn.strftime('%A')}", 181+txoff//3, 52+ldl_y, 3, color=yeller, mono=18, ofw=1.07, upper=veryuppercase)
+    elif slide == "ti":
+        drawshadow(startitlefont, "Tides", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=16, ofw=1.07, bs=True, upper=veryuppercase)
+    elif slide == "test":
+        drawshadow(startitlefont, "Test Page", 181, 25+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True)
+        drawshadow(startitlefont, "of Awesomeness", 181, 54+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True)
+
     #debug mouse pos
     #drawshadow(smallfont, time_fmt(crawlinterval), 5, 440, 3)
     #drawshadow(smallfont, str(pg.mouse.get_pos()), 5, 440, 3)
@@ -2721,6 +3077,9 @@ while working:
     elif (rwin.get_width()/rwin.get_height() < (rwidth/480)): #taller
         sl = rwin.get_width()/rwidth
         transform = (sl/(1.2 if compress else 1), sl)
+    else:
+        sl = rwin.get_height()/480
+        transform = (sl/(1.2 if compress else 1), sl)
 
     if transform != (1, 1):
         if smoothscale:
@@ -2732,6 +3091,7 @@ while working:
 
     rwin.fill((0, 0, 0))
     rwin.blit(tr, (rwin.get_width()/2-tr.get_width()/2, rwin.get_height()/2-tr.get_height()/2))
+    del tr
     pg.display.flip()
     if outputs:
         avbuffer = win.copy()
