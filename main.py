@@ -11,7 +11,7 @@ from io import BytesIO
 import runpy
 import gc
 
-VERSION = "1.2"
+VERSION = "1.2.1"
 
 audiorate = 44100
 widescreen = False
