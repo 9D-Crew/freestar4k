@@ -2739,7 +2739,7 @@ while working:
             drawshadow(smallfont, "HIGH", 479+round((screenw-768)*2/3)+54+66, 75, 3, color=yeller, mono=gmono, char_offsets={})
         elif slide == "ti":
             lines = ["", "", "", "", "", "", ""]
-            line = tidal[2] + " Tides"
+            line = tidal[2]
             lines[0] = (m.floor(16-len(line)/2)*" "+line)
             if aldata["tidal"][0]:
                 lines[1] = textmerge(textmerge("Lows:",
@@ -2748,7 +2748,7 @@ while working:
                 lines[2] = textmerge(textmerge("Highs:",
                                     " "*7+padtext(aldata["tidal"][0]["highs"][0][0], 11)),
                                     " "*21+padtext(aldata["tidal"][0]["highs"][1][0], 11))
-            line = tidal[3] + " Tides"
+            line = tidal[3]
             lines[3] = (m.floor(16-len(line)/2)*" "+line)
             if aldata["tidal"][1]:
                 lines[4] = textmerge(textmerge("Lows:",
