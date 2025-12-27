@@ -11,7 +11,7 @@ from io import BytesIO
 import runpy
 import gc
 
-VERSION = "1.2.2 Unstable B"
+VERSION = "1.2.2 Unstable C"
 
 audiorate = 44100
 widescreen = False
@@ -699,7 +699,7 @@ def splubby_the_return(tx):
         return tx
 
 if "al" in flavor:
-    import ephem
+    import moon_calc
 
 import traceback as tb
 
@@ -870,10 +870,10 @@ def getdata():
         if "al" in flavor:
             startdt = dt.date.today()
             moons = sorted([
-                ("new", ephem.localtime(ephem.next_new_moon(startdt))),
-                ("lq",  ephem.localtime(ephem.next_last_quarter_moon(startdt))),
-                ("fq",  ephem.localtime(ephem.next_first_quarter_moon(startdt))),
-                ("full",  ephem.localtime(ephem.next_full_moon(startdt)))
+                ("new", moon_calc.localtime(moon_calc.next_new_moon(startdt))),
+                ("lq",  moon_calc.localtime(moon_calc.next_last_quarter_moon(startdt))),
+                ("fq",  moon_calc.localtime(moon_calc.next_first_quarter_moon(startdt))),
+                ("full",  moon_calc.localtime(moon_calc.next_full_moon(startdt)))
             ], key=(lambda p : p[1]))
             mooninfo = [(
                 {"new": "New", "fq": "First", "lq": "Last", "full": "Full"}[p[0]],

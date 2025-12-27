@@ -9,9 +9,6 @@ if ver.major < 3:
 if ver.minor < 9:
     print("Python 3.8 and below are not supported. Expect errors!")
     supported = False
-if ver.minor > 13:
-    print("Python 3.14 and up are not supported. Expect errors!")
-    supported = False
 
 errors = 0
 def download_package(name):
@@ -26,7 +23,7 @@ def download_package(name):
         print(f"Package {pkg} is already installed")
         return True
 
-for pkg in ["pygame-ce", "wxPython", "sounddevice", "requests", "ephem", "opencv-python", "av"]:
+for pkg in ["pygame-ce", "wxPython", "sounddevice", "requests", "opencv-python", "av"]:
     print(f"Installing package {pkg}")
     download_package(pkg)
 
