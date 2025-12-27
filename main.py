@@ -11,7 +11,7 @@ from io import BytesIO
 import runpy
 import gc
 
-VERSION = "1.2.2"
+VERSION = "1.2.2 Unstable B"
 
 audiorate = 44100
 widescreen = False
@@ -463,11 +463,12 @@ def draw_bg(top_offset=0, bh_offset=0, all_offset=0, special=None, box=True):
         xoff = (screenw-768)//2
         adjust = -6
         for i  in range(4):
-            pg.draw.rect(win, box_c[0], pg.Rect(62+xoff, 90-all_offset+77*i+9, 622, 76+adjust))
-            pg.draw.rect(win, box_c[1], pg.Rect(65+xoff, 93-all_offset+77*i+9, 616, 70+adjust))
-            pg.draw.rect(win, box_c[2], pg.Rect(68+xoff, 96-all_offset+77*i+9, 610, 64+adjust))
-            pg.draw.rect(win, box_c[3], pg.Rect(71+xoff, 99-all_offset+77*i+9, 604, 58+adjust))
-            pg.draw.rect(win, box_c[4], pg.Rect(74+xoff, 102-all_offset+77*i+9, 598, 52+adjust))
+            yoo = (ldl_y//4)
+            pg.draw.rect(win, box_c[0], pg.Rect(62+xoff, 90- all_offset+(77+yoo)*i+9, 622, 76+adjust))
+            pg.draw.rect(win, box_c[1], pg.Rect(65+xoff, 93- all_offset+(77+yoo)*i+9, 616, 70+adjust))
+            pg.draw.rect(win, box_c[2], pg.Rect(68+xoff, 96- all_offset+(77+yoo)*i+9, 610, 64+adjust))
+            pg.draw.rect(win, box_c[3], pg.Rect(71+xoff, 99- all_offset+(77+yoo)*i+9, 604, 58+adjust))
+            pg.draw.rect(win, box_c[4], pg.Rect(74+xoff, 102-all_offset+(77+yoo)*i+9, 598, 52+adjust))
     
 
 def draw_ldl(top_offset=0, bh_offset=0, all_offset=0):
@@ -684,7 +685,7 @@ ldllficon = pg.image.load_animation("icons_reg/Partly-Cloudy.gif")
 xficons = [None, None, None, None, None, None]
 
 regmap = pg.image.load("regmap.png")
-regmapcut = pg.Surface((768, 480), pg.SRCALPHA)
+regmapcut = pg.Surface((screenw, 480), pg.SRCALPHA)
 regmapcut.fill(_gray)
 
 radardata = None
@@ -2657,14 +2658,15 @@ while working:
                 drawshadow(starfont32, "       No Report Available", 80, 109+linespacing*2.5+ldl_y, 3, mono=gmono)
             else:
                 for i  in range(4):
+                    yoo = (ldl_y//4)
                     j = i+4+subpage*4
                     header = wxdata["extended"]["daypart"][j]["name"].upper()
                     header = textmerge(header, f"                {'HI' if wxdata['extended']['daypart'][j]['dayOrNight'] == 'D' else 'LO'}  WIND")
-                    drawshadow(smallfont, header, 62+14+txoff, 84+ldl_y+77*i+9, 3, mono=gmono)
+                    drawshadow(smallfont, header, 62+14+txoff, 84+ldl_y+(yoo+77)*i+9, 3, mono=gmono)
                     ps = wxdata["extended"]["daypart"][j]["phraseShort"]
                     pl = wxdata["extended"]["daypart"][j]["phraseLong"]
-                    drawshadow(starfont32, ps if len(pl) > 14 else pl, 62+14+txoff, 96+14+ldl_y+77*i+9, 3, mono=gmono)
-                    drawshadow(starfont32, str(wxdata["extended"]["daypart"][j]["temperature"]), 62+14+txoff+18*16, 96+14+ldl_y+77*i+9, 3, mono=gmono)
+                    drawshadow(starfont32, ps if len(pl) > 14 else pl, 62+14+txoff, 96+14+ldl_y+(yoo+77)*i+9, 3, mono=gmono)
+                    drawshadow(starfont32, padtext(wxdata["extended"]["daypart"][j]["temperature"], 3), 62+14+txoff+18*15, 96+14+ldl_y+(yoo+77)*i+9, 3, mono=gmono)
                     ws = wxdata["extended"]["daypart"][j]["windSpeed"]
                     wc = wxdata["extended"]["daypart"][j]["windCardinal"]
                     if ws > 9:
@@ -2673,8 +2675,8 @@ while working:
                         wt = "Calm"
                     else:
                         wt = textmerge(wc, f"   {ws}")
-                    drawshadow(starfont32, wt, 62+14+txoff+18*20, 96+14+ldl_y+77*i+9, 3, mono=gmono)
-                    drawreg(dficons[i], (640+txoff-15, 96+14+ldl_y+77*i+24), ix=(m.floor(iconidx2) % len(dficons[i])))
+                    drawshadow(starfont32, wt, 62+14+txoff+18*20, 96+14+ldl_y+(yoo+77)*i+9, 3, mono=gmono)
+                    drawreg(dficons[j-4], (640+txoff-15, 96+14+ldl_y+(yoo+77)*i+20), ix=(m.floor(iconidx2) % len(dficons[j-4])))
         elif slide == "intro":
             drawshadow(startitlefont, "Welcome!", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
 
