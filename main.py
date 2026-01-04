@@ -207,6 +207,7 @@ try:
     smoothscale = getattr(conf, "smoothscale", True)
     crawllen = getattr(conf, "crawllen", 40)
     tidal = getattr(conf, "tidal", ("", "", "", ""))
+    fullscreen = getattr(conf, "fullscreen", False)
 except ModuleNotFoundError:
     print("Configuration not found! Try saving your configuration again.")
     exit(1)
@@ -236,7 +237,13 @@ screenw = 768 if not widescreen else 1024
 
 win = pg.Surface((screenw, 480))
 rwidth = screenw if not compress else int(screenw//1.2)
-rwin = pg.display.set_mode((rwidth, 480), flags=(borderless*pg.NOFRAME)|pg.RESIZABLE)
+if fullscreen:
+    info = pg.display.Info()
+    w, h = info.current_w, info.current_h
+    rwin = pg.display.set_mode((w, h), pg.FULLSCREEN)
+if not fullscreen:
+    rwin = pg.display.set_mode((rwidth, 480), flags=(borderless*pg.NOFRAME)|pg.RESIZABLE)
+
 
 pg.display.set_caption(f"FreeStar 4000 v{VERSION}")
 icon = pg.image.load("mwsicon.png")
