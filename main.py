@@ -3098,6 +3098,7 @@ while working:
     rwin.blit(tr, (rwin.get_width()/2-tr.get_width()/2, rwin.get_height()/2-tr.get_height()/2))
     del tr
     pg.display.flip()
+    cl.tick(30)
     if outputs:
         avbuffer = win.copy()
         avevent.set()
