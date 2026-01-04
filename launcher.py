@@ -1029,26 +1029,44 @@ class Launcher(wx.Frame):
         extensionsel = wx.CheckListBox(page8, choices=extensions_possible)
         
         pa = wx.Panel(page8)
-        pas = wx.BoxSizer(wx.HORIZONTAL)
+        pas = wx.BoxSizer(wx.VERTICAL)
         pa.SetSizer(pas)
+
         metric = wx.CheckBox(pa, label="Metric Units")
         borderless = wx.CheckBox(pa, label="Borderless Window")
         widescreen = wx.CheckBox(pa, label="Widescreen")
+        fullscreen = wx.CheckBox(pa, label="Fullscreen")
         compress = wx.CheckBox(pa, label="Compress Window")
-        compress.SetToolTip(wx.ToolTip("Compresses the window horizontally to match the expected aspect ratio. Normally, it is wider by a factor of 1.2x to match the actual 4000 framebuffer size."))
+        compress.SetToolTip(
+            wx.ToolTip(
+                "Compresses the window horizontally to match the expected aspect ratio. "
+                "Normally, it is wider by a factor of 1.2x to match the actual 4000 framebuffer size."
+            )
+        )
         noaudio = wx.CheckBox(pa, label="Mute Audio")
         smoothscale = wx.CheckBox(pa, label="Smooth Scale")
-        pas.Add(metric, 0, wx.ALL, 2)
-        pas.AddStretchSpacer()
-        pas.Add(borderless, 0, wx.ALL, 2)
-        pas.AddStretchSpacer()
-        pas.Add(compress, 0, wx.ALL, 2)
-        pas.AddStretchSpacer()
-        pas.Add(widescreen, 0, wx.ALL, 2)
-        pas.AddStretchSpacer()
-        pas.Add(noaudio, 0, wx.ALL, 2)
-        pas.AddStretchSpacer()
-        pas.Add(smoothscale, 0, wx.ALL, 2)
+
+        # ---------- Row 1 ----------
+        row1 = wx.BoxSizer(wx.HORIZONTAL)
+        row1.Add(metric, 0, wx.ALL, 2)
+        row1.AddSpacer(10)
+        row1.Add(borderless, 0, wx.ALL, 2)
+        row1.AddSpacer(10)
+        row1.Add(compress, 0, wx.ALL, 2)
+        row1.AddSpacer(10)
+        row1.Add(widescreen, 0, wx.ALL, 2)
+
+        # ---------- Row 2 ----------
+        row2 = wx.BoxSizer(wx.HORIZONTAL)
+        row2.Add(noaudio, 0, wx.ALL, 2)
+        row2.AddSpacer(10)
+        row2.Add(smoothscale, 0, wx.ALL, 2)
+        row2.AddSpacer(10)
+        row2.Add(fullscreen, 0, wx.ALL, 2)
+
+        pas.Add(row1, 0, wx.EXPAND)
+        pas.Add(row2, 0, wx.EXPAND)
+
         p8sizer.Add(pa, 0, wx.ALL | wx.EXPAND, 2)
         
         p8sizer.Add(wx.StaticText(page8, label="Extensions:"), 0, wx.ALL | wx.EXPAND, 4)
@@ -1065,6 +1083,7 @@ class Launcher(wx.Frame):
             noaudio.SetValue(existing_conf.get("mute", False))
             compress.SetValue(existing_conf.get("compress", False))
             smoothscale.SetValue(existing_conf.get("smoothscale", True))
+            fullscreen.SetValue(existing_conf.get("fullscreen", False))
         
         #be careful, i heard that getconfig bytes.
         def getconfig():
@@ -1133,6 +1152,7 @@ class Launcher(wx.Frame):
             items.append(("musicsetting", musicsetting.GetSelection()))
             items.append(("crawllen", crawllen.GetValue()))
             items.append(("tidal", (t1i.GetValue(), t2i.GetValue(), t1n.GetValue(), t2n.GetValue())))
+            items.append(("fullscreen", fullscreen.GetValue()))
             iv = ins.GetValue()
             try:
                 iv = int(iv)
