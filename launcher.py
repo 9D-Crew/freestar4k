@@ -1148,6 +1148,7 @@ class Launcher(wx.Frame):
             items.append(("musicsetting", musicsetting.GetSelection()))
             items.append(("crawllen", crawllen.GetValue()))
             items.append(("tidal", (t1i.GetValue(), t2i.GetValue(), t1n.GetValue(), t2n.GetValue())))
+            items.append(("framerate", framerate.GetValue()))
             iv = ins.GetValue()
             try:
                 iv = int(iv)
@@ -1252,7 +1253,7 @@ class Launcher(wx.Frame):
         
         about = wx.Panel(self.nb)
         aboutsizer = wx.BoxSizer(wx.VERTICAL)
-        abouttext = wx.StaticText(about, label="FreeStar 4k Launcher\nVersion 1.2.2", style=wx.ALIGN_CENTER)
+        abouttext = wx.StaticText(about, label="FreeStar 4k Launcher\nVersion 1.2.3", style=wx.ALIGN_CENTER)
         logo = wx.StaticBitmap(about, bitmap=wx.Bitmap("launcher/icon_128x128.png", wx.BITMAP_TYPE_PNG))
         abouttext2 = wx.StaticText(about, label="Developed by 9D Crew\nA special thanks to COLSTER for helping with gathering STAR fonts!\nThanks to Nick S. and Malek Masoud for creating the icons used by this simulator.\nThanks to Bill Goodwill for contributing to The Weather Channel community by creating the WS4000 simulator.\nThis program is licensed under the GNU General Public License v3.0.\nFor questions, visit https://freestar.lewolfyt.cc/", style=wx.ALIGN_CENTER)
         aboutsizer.Add(abouttext, 0, wx.ALL | wx.ALIGN_CENTER, 10)

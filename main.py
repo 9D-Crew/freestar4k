@@ -11,7 +11,7 @@ from io import BytesIO
 import runpy
 import gc
 
-VERSION = "1.2.2 Unstable E"
+VERSION = "1.2.3"
 
 audiorate = 44100
 widescreen = False
@@ -90,6 +90,8 @@ extraldltext = ""
 seconds = 60
 minutes = 60*60
 hours = 60*60*60
+
+framerate = 60
 
 crawlintervaltime = 15*minutes
 crawlinterval = crawlintervaltime*1
@@ -207,6 +209,7 @@ try:
     smoothscale = getattr(conf, "smoothscale", True)
     crawllen = getattr(conf, "crawllen", 40)
     tidal = getattr(conf, "tidal", ("", "", "", ""))
+    framerate = getattr(conf, "framerate", 60)
 except ModuleNotFoundError:
     print("Configuration not found! Try saving your configuration again.")
     exit(1)
@@ -1158,7 +1161,7 @@ jrfonttravel, jrwidthstravel, jroffsetstravel = loadjrfont("travel")
 
 charset_col = {}
 
-def drawchar(char, cset, x, y, color):
+def drawchar(char, cset, x, y, color, half=0):
     if char.strip() == "":
         return
     if char in chars:
@@ -1177,8 +1180,10 @@ def drawchar(char, cset, x, y, color):
             cset2 = cset.copy()
             cset2.fill(color, special_flags=pg.BLEND_RGBA_MULT)
             charset_col[(cset, color)] = cset2
-    
-    win.blit(cset2, (x, y), pg.Rect((ix*32)%cset.get_width(), int(ix*32//cset.get_width())*(cset.get_height()//6), 32, cset.get_height()//6))
+    cheight = cset.get_height()//6
+    if half == 1:
+        cheight /= 2
+    win.blit(cset2, (x, y), pg.Rect((ix*32)%cset.get_width(), int(ix*32//cset.get_width())*(cset.get_height()//6), 32, cheight))
 
 white = (215, 215, 215)
 
@@ -1247,7 +1252,7 @@ def drawshadow(font, text, x, y, offset, color=white, surface=win, mono=0, ofw=N
                 if fxa[0]:
                     fxo = (rd.randint(-1, 1), rd.randint(-1, 1))
                     fx[0].append(fxo)
-                drawchar(char, sheet[1], x+fxo[0]+xx+char_offsets.get(char, 0), y+fxo[1], None)
+                drawchar(char, sheet[1], x+fxo[0]+xx+char_offsets.get(char, 0), y+fxo[1], None, half=fxa[1])
                 if variable:
                     xx += (variable[chars.index(char)]+1) if variable[chars.index(char)] else 15
                 else:
@@ -1264,13 +1269,11 @@ def drawshadow(font, text, x, y, offset, color=white, surface=win, mono=0, ofw=N
                 io += 1
                 fxa[1] = not fxa[1]
                 continue
-            if fxa[1]:
-                continue
             fxo = (0, 0)
             if fxa[0]:
                 fxo = fx[0][ic]
                 ic += 1
-            drawchar(char, sheet[0], x+fxo[0]+xx+char_offsets.get(char, 0), y+fxo[1], color if type(color) != list else color[i])
+            drawchar(char, sheet[0], x+fxo[0]+xx+char_offsets.get(char, 0), y+fxo[1], color if type(color) != list else color[i], half=fxa[1])
             if variable:
                 xx += (variable[chars.index(char)]+1) if variable[chars.index(char)] else 15
             else:
@@ -1567,6 +1570,11 @@ def wraptext(text, ll=32):
 def drawing(text, amount, ram=False):
     final = ""
     am = amount*1
+    if am > len(text):
+        am -= len(text)
+        if ram:
+            return text, am
+        return text
     for char in text:
         if am <= 0:
             break
@@ -1853,7 +1861,7 @@ p_counter = 0
 resetup = set() #if a url is in this list it will be set back up asap
 def setupstream(url):
     s = av.open(url, mode="w", format="flv")
-    st = s.add_stream(vencoder, rate=60)
+    st = s.add_stream(vencoder, rate=framerate)
     at = None
     if not mute:
         at = s.add_stream("aac", rate=audiorate)
@@ -2106,7 +2114,7 @@ while working:
             fired = True
             ldlmode = False
     your = "Your " if ("oldtitles" in old and (textpos > 1 or widescreen)) else ""
-    delta = cl.tick(60) / 1000
+    delta = cl.tick(framerate) / 1000
     
     radartime -= delta
     if radartime < 0:
@@ -2279,7 +2287,7 @@ while working:
                 #     drawshadow(startitlefont, "Conditions", 194+txoff//3, 52+ldl_y, 3, color=yeller, mono=18, ofw=1.07, bs=True, upper=veryuppercase)
                 if wxdata is None:
                     if veryuppercase:
-                        drawpage(["NO REPORT AVAILABLE"])
+                        drawpage(["No Current Report"])
                     else:
                         drawshadow(starfont32, "       No Report Available", 80+txoff, 109+linespacing*2.5+ldl_y, 3, mono=gmono)
                 else:
@@ -2492,9 +2500,48 @@ while working:
                 else:
                     fcsts = wxdata["extended"]["daypart"]
                     
-                    all_lines = finallines.copy()
+                    textix = 0
                     
+                    texts = []
                     
+                    clear = False
+                    squeeze = False
+                    
+                    for textixx in range(4):
+                        texts.append(wraptext((fcsts[textixx]["name"][0].upper() + fcsts[textixx]["name"][1:].lower()) + "..." + fcsts[textixx]["narration"]))
+                        if veryuppercase:
+                            texts[-1] = texts[-1].upper()
+                    def build36(squ):
+                        global textix, texts
+                        all_lines = finallines.copy()
+                        while True:
+                            if len(all_lines) >= 21:
+                                return all_lines, True
+                            if len(all_lines) >= 14 and textix > 2:
+                                return all_lines, True
+                            
+                            if len(all_lines) % 7 == 0:
+                                for line in texts[-1]:
+                                    all_lines.append(line)
+                                textix += 1
+                            
+                            elif len(all_lines) + len(texts[textix]) <= 21:
+                                for line in texts[textix]:
+                                    all_lines.append(line)
+                                textix += 1
+                                if len(all_lines) % 7 != 0 and not squ:
+                                    all_lines.append("\n")
+                            elif len(all_lines) + 1 <= 21:
+                                all_lines.append((fcsts[textix]["name"][0].upper() + fcsts[textix]["name"][1:].lower()) + "...")
+                                return all_lines, False
+                    
+                    all_lines, sq = build36(False)
+                    if not sq:
+                        textix = 0
+                        a2, sq2 = build36(True)
+                        if sq2:
+                            all_lines = a2
+                        
                     
                     drawpage(all_lines[(subpage*7):])
         elif slide == "lr":
@@ -2677,7 +2724,8 @@ while working:
         elif slide == "intro":
             drawshadow(startitlefont, "Welcome!", 181+txoff//3, 39+ldl_y, 3, color=yeller, mono=15.5, ofw=1.07, bs=True, upper=veryuppercase)
 
-            generaldrawidx += 3.5
+            generaldrawidx += 3.5 / (framerate / 30)
+            generaldrawidx = round(generaldrawidx*100)/100
             dr = generaldrawidx*1
             it = f"Hello,"
             if veryuppercase:
@@ -2897,10 +2945,11 @@ while working:
                 del mm
             
             if ldldrawing:
-                ldldrawidx += 2.5
+                ldldrawidx += 3.5 / (framerate / 30)
+                ldldrawidx = round(ldldrawidx*100)/100
                 if veryuppercase and ldlidx != 0:
                     ldltext = ldltext.upper()
-                ldltext = drawing(ldltext, ldldrawidx)
+                ldltext = drawing(ldltext + " ", ldldrawidx)
             profiling_end("ops")
             if ui and ooo:
                 drawshadow(starfont32, ldltext, 78+txoff-ldlextra*18, 403+ldl_y_off, 3, mono=gmono, char_offsets={})
@@ -2932,7 +2981,7 @@ while working:
             nextcrawlready = False
             crawlscroll += 2*delta*seconds
             if alerting:
-                pg.draw.rect(win, ((187, 17, 0) if (slide not in ["lr", "cr"] or ("warnpalbug" not in old)) else (128, 16, 0)) if True or "ADVISORY" not in crawl else (126, 31, 0), pg.Rect(0, 404-ao-ao//2, screenw, 76+ao+ao//2))
+                pg.draw.rect(win, ((187, 17, 0) if (slide not in ["lr", "cr"] or ("warnpalbug" not in old)) else (128, 16, 0)) if True or "ADVISORY" not in crawl else (126, 31, 0), pg.Rect(0, 404, screenw, 76))
             jrf = jrfontnormal
             if (
                 (
