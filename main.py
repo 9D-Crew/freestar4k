@@ -417,7 +417,7 @@ ban_c = [(209, 94, 0), (184, 83, 17), (168, 77, 28), (153, 70, 38), (117, 55, 62
 ban_c = list(reversed(bg_c))
 box_c = [(60, 104, 192), (52, 88, 168), (48, 72, 140), (40, 56, 112), (40, 44, 96)]
 tcf_c = [(22, 59, 133), (18, 47, 119), (13, 35, 105), (9, 24, 92), (4, 12, 78), (4, 12, 78), (4, 12, 78), (9, 24, 92), (13, 35, 105), (18, 47, 119), (22, 59, 133)]
-tcf_bg = draw_palette_gradient(pg.Rect(0, 0, 768, 72*4), tcf_c)
+tcf_bg = draw_palette_gradient(pg.Rect(0, 0, screenw, 72*4), tcf_c)
 ldl_c = (40, 56, 112)
 outer_c = (44, 24, 112)
 
@@ -2783,15 +2783,25 @@ while working:
                     win.blit(tcf_bg, (0, 91+(i-2)*tcf_bg.get_height()+18+yy%tcf_bg.get_height()))
             else:
                 win.fill((0, 0, 64))
-            for i, name in enumerate(tcflocs):
-                drawshadow(largefont32, name[1], 96, 72*i+120+yy, 3, color=yeller, mono=19, variable=jrwidthstravel, char_offsets=jroffsetstravel)
-                if tcflocs[i][2]:
-                    drawshadow(largefont32, padtext(str(tcflocs[i][2]["extended"]["daily"][1]["tempMin"]), 3), 540-21, 72*i+120+yy, 3, color=yeller, mono=21)
-                    drawshadow(largefont32, padtext(str(tcflocs[i][2]["extended"]["daily"][1]["tempMax"]), 3), 613-21, 72*i+120+yy, 3, color=yeller, mono=21)
-                if tcflocs[i][3]:
-                    drawreg(tcflocs[i][3], (430, 72*i+120+yy+20), (m.floor(iconidx3) % len(tcflocs[i][3])))
             
-            pg.draw.rect(win, outer_c, pg.Rect(0, 91, screenw, 20))
+            stat = 0
+            for i, name in enumerate(tcflocs):
+                if (72*i+yy+ldl_y) <= -72:
+                    continue
+                
+                if stat > 4:
+                    continue
+                
+                stat += 1
+                
+                drawshadow(largefont32, name[1], 96, 72*i+120+yy+ldl_y, 3, color=yeller, mono=19, variable=jrwidthstravel, char_offsets=jroffsetstravel)
+                if tcflocs[i][2]:
+                    drawshadow(largefont32, padtext(str(tcflocs[i][2]["extended"]["daily"][1]["tempMin"]), 3), 540-21, 72*i+120+yy+ldl_y, 3, color=yeller, mono=21)
+                    drawshadow(largefont32, padtext(str(tcflocs[i][2]["extended"]["daily"][1]["tempMax"]), 3), 613-21, 72*i+120+yy+ldl_y, 3, color=yeller, mono=21)
+                if tcflocs[i][3]:
+                    drawreg(tcflocs[i][3], (430, 72*i+120+yy+ldl_y+20), (m.floor(iconidx3) % len(tcflocs[i][3])))
+            
+            pg.draw.rect(win, outer_c, pg.Rect(0, 91+ldl_y, screenw, 20))
             drawshadow(smallfont, "LOW", 479+round((screenw-768)*2/3)+54, 75+ldl_y, 3, color=yeller, mono=gmono, char_offsets={})
             drawshadow(smallfont, "HIGH", 479+round((screenw-768)*2/3)+54+66, 75+ldl_y, 3, color=yeller, mono=gmono, char_offsets={})
         elif slide == "ti":
