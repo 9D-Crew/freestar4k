@@ -249,7 +249,7 @@ else:
     rwin = pg.display.set_mode((rwidth, 480), flags=(borderless*pg.NOFRAME)|pg.RESIZABLE)
 
 pg.display.set_caption(f"FreeStar 4000 v{VERSION}")
-icon = pg.image.load("mwsicon.png")
+icon = pg.image.load("images/misc/mwsicon.png")
 pg.display.set_icon(icon)
 
 ext_loaded = []
@@ -690,11 +690,11 @@ xficontable = [
 
 icon_offset = {"Rain": (10, 10), "Sunny": (0, 10), "Fog": (0, 15)}
 
-mainicon = pg.image.load_animation("icons_cc/Partly-Cloudy.gif")
-ldllficon = pg.image.load_animation("icons_reg/Partly-Cloudy.gif")
+mainicon = pg.image.load_animation("icons/cc/Partly-Cloudy.gif")
+ldllficon = pg.image.load_animation("icons/reg/Partly-Cloudy.gif")
 xficons = [None, None, None, None, None, None]
 
-regmap = pg.image.load("regmap.png")
+regmap = pg.image.load("images/misc/regmap.png")
 regmapcut = pg.Surface((screenw, 480), pg.SRCALPHA)
 regmapcut.fill(_gray)
 
@@ -776,7 +776,7 @@ def getdata():
             if icontable[wxdata['current']['info']['iconCode']] is None:
                 mainicon = [(pg.Surface((1, 1), pg.SRCALPHA), None)]
             else:
-                micon = pg.image.load_animation(f"icons_cc/{icontable[wxdata['current']['info']['iconCode']]}.gif")
+                micon = pg.image.load_animation(f"icons/cc/{icontable[wxdata['current']['info']['iconCode']]}.gif")
                 nmicon = []
                 for fr, ftime in micon:
                     nmicon.append((fr.convert_alpha(), ftime))
@@ -785,7 +785,7 @@ def getdata():
             if regionalicontable[wxdata['extended']['daypart'][dn]['iconCode']] is None:
                 mainicon = [(pg.Surface((1, 1), pg.SRCALPHA), None)]
             else:
-                micon = pg.image.load_animation(f"icons_reg/{regionalicontable[wxdata['extended']['daypart'][dn]['iconCode']]}.gif")
+                micon = pg.image.load_animation(f"icons/reg/{regionalicontable[wxdata['extended']['daypart'][dn]['iconCode']]}.gif")
                 nricon = []
                 for fr, ftime in micon:
                     nricon.append((fr.convert_alpha(), ftime))
@@ -795,7 +795,7 @@ def getdata():
                 for i in range(12):
                     ic = regionalicontable[wxdata['extended']['daypart'][i+4]['iconCode']]
                     if ic:
-                        dficons[i] = [(s.convert_alpha(), ft) for s, ft in pg.image.load_animation(f"icons_reg/{ic}.gif")]
+                        dficons[i] = [(s.convert_alpha(), ft) for s, ft in pg.image.load_animation(f"icons/reg/{ic}.gif")]
                     else:
                         dficons[i] = []
             
@@ -837,7 +837,7 @@ def getdata():
                 if xficontable[wxdata['extended']['daypart'][ix]['iconCode']] is None:
                     ficon = [(pg.Surface((1, 1), pg.SRCALPHA), None)]
                 else:
-                    xficon = pg.image.load_animation(f"icons_xf/{xficontable[wxdata['extended']['daypart'][ix]['iconCode']]}.gif")
+                    xficon = pg.image.load_animation(f"icons/xf/{xficontable[wxdata['extended']['daypart'][ix]['iconCode']]}.gif")
                     ficon = []
                     for fr, ftime in xficon:
                         ficon.append((fr.convert_alpha(), ftime))
@@ -913,7 +913,7 @@ def getdata():
             global leds
             try:
                 l[2] = r.get(f"https://wx.lewolfyt.cc/?loc={l[0]}&include=current"+("" if not metric else "&units=m")).json()
-                l3 = pg.image.load_animation(f'icons_reg/{regionalicontable[l[2]["current"]["info"]["iconCode"]]}.gif')
+                l3 = pg.image.load_animation(f'icons/reg/{regionalicontable[l[2]["current"]["info"]["iconCode"]]}.gif')
                 l[3] = [(l[0].convert_alpha(), l[1]) for l in l3]
                 #print("got reg icon")
                 leds[1] = True
@@ -923,7 +923,7 @@ def getdata():
             global leds
             try:
                 l[2] = r.get(f"https://wx.lewolfyt.cc/?loc={l[0]}&include=extended"+("" if not metric else "&units=m")).json()
-                l3 = pg.image.load_animation(f'icons_reg/{regionalicontable[l[2]["extended"]["daypart"][1+(l[2]["extended"]["daypart"][0]["dayOrNight"]=="D")]["iconCode"]]}.gif')
+                l3 = pg.image.load_animation(f'icons/reg/{regionalicontable[l[2]["extended"]["daypart"][1+(l[2]["extended"]["daypart"][0]["dayOrNight"]=="D")]["iconCode"]]}.gif')
                 l[3] = [(l[0].convert_alpha(), l[1]) for l in l3]
                 #print("got reg icon")
                 leds[1] = True
@@ -1117,11 +1117,11 @@ def shorten_phrase(phrase : str):
         return "Showers"
     return phrase
 
-smallfont = pg.font.Font("Small.ttf", 32)
-largefont32 = pg.font.Font("Large.ttf", 33)
-startitlefont = pg.font.Font("Main.ttf", 33)
-starfont32 = pg.font.Font("Main.ttf", 34)
-extendedfont = pg.font.Font("Extended.ttf", 33)
+smallfont = pg.font.Font("fonts/Small.ttf", 32)
+largefont32 = pg.font.Font("fonts/Large.ttf", 33)
+startitlefont = pg.font.Font("fonts/Main.ttf", 33)
+starfont32 = pg.font.Font("fonts/Main.ttf", 34)
+extendedfont = pg.font.Font("fonts/Extended.ttf", 33)
 
 font_tallest = {largefont32: 0, smallfont: 0, starfont32: 0}
 for char in "qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM-":
@@ -1146,9 +1146,9 @@ def quickread(file):
         return f.read().strip().rstrip()
 
 def loadjrfont(name):
-    surfs = (pg.image.load(f"jrfonts/fill/{name}.png").convert_alpha(), pg.image.load(f"jrfonts/shadow/{name}.png").convert_alpha())
-    widths = quickread(f"jrfonts/fill/{name}.widths.txt").split(",")
-    offsets = quickread(f"jrfonts/fill/{name}.offsets.txt").split(",")
+    surfs = (pg.image.load(f"fonts/jrfonts/fill/{name}.png").convert_alpha(), pg.image.load(f"fonts/jrfonts/shadow/{name}.png").convert_alpha())
+    widths = quickread(f"fonts/jrfonts/fill/{name}.widths.txt").split(",")
+    offsets = quickread(f"fonts/jrfonts/fill/{name}.offsets.txt").split(",")
     off2 = {}
     for i, v in enumerate(offsets):
         off2[chars[i]] = -int(v)
@@ -1356,7 +1356,7 @@ else:
 
 #ws2 = pg.transform.smoothscale(pg.image.load("almanacref2b.png"), (768, 480))
 
-noaa = pg.image.load("noaa.gif").convert_alpha()
+noaa = pg.image.load("images/misc/noaa.gif").convert_alpha()
 
 logo = pg.image.load(mainlogo)
 logorad = pg.image.load(radarlogo)
@@ -1707,10 +1707,10 @@ for ext in ext_loaded:
         parse_ext_action(ext_action)
 
 if not mute:
-    beep = pg.Sound("beep.ogg")
+    beep = pg.Sound("sounds/beep.ogg")
 radarx = ['', '99'][radarsetting]
-radarHeader = pg.transform.scale(pg.image.load(f"radar{radarx}.png"), (768, 480))
-radarHeaderC = pg.transform.scale(pg.image.load(f"radarc{radarx}.png"), (768, 480))
+radarHeader = pg.transform.scale(pg.image.load(f"images/radar/radar{radarx}.png"), (768, 480))
+radarHeaderC = pg.transform.scale(pg.image.load(f"images/radar/radarc{radarx}.png"), (768, 480))
 if screenw > 768:
     radarLeft = pg.transform.scale(radarHeader.subsurface(pg.Rect(0, 0, 1, radarHeader.get_height())), (m.ceil((screenw-768)/2), radarHeader.get_height()))
     radarRight = pg.transform.scale(radarHeader.subsurface(pg.Rect(radarHeader.get_width()-1, 0, 1, radarHeader.get_height())), (m.ceil((screenw-768)/2), radarHeader.get_height()))
@@ -1993,7 +1993,7 @@ if outputs:
         set_post_mix(postmix)
         th.Thread(target=dowriteaudio, daemon=True).start()
 
-xfbg = pg.image.load("xfbg.png")
+xfbg = pg.image.load("images/misc/xfbg.png")
 
 def safedivide(x, y):
     if y == 0:
